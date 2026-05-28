@@ -1183,8 +1183,11 @@ document.getElementById('btnYtClear').addEventListener('click', () => {
 function loadSettings() {
   document.getElementById('inputGoogleClientId').value  = localStorage.getItem('googleClientId')  || '';
   document.getElementById('inputSpotifyClientId').value = localStorage.getItem('spotifyClientId') || '';
+  const redirectUri=window.location.origin+window.location.pathname.replace(/\/?$/,'/');
   const d=document.getElementById('redirectUriDisplay');
-  if(d) d.textContent=window.location.origin+window.location.pathname.replace(/\/?$/,'/');
+  if(d) d.textContent=redirectUri;
+  const d2=document.getElementById('redirectUriDisplay2');
+  if(d2) d2.textContent=redirectUri;
 }
 
 document.getElementById('btnSaveSettings').addEventListener('click',()=>{

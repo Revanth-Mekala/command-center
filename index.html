@@ -612,12 +612,33 @@
           <div class="settings-group-title">Integrations</div>
           <div class="settings-field">
             <label class="settings-label">Google Client ID</label>
-            <div class="settings-hint">Google Cloud Console → APIs &amp; Services → Credentials → OAuth 2.0 Client IDs</div>
+            <div class="settings-hint">Required to connect Google Calendar.</div>
+            <details class="settings-steps">
+              <summary>How to get this</summary>
+              <ol>
+                <li>Go to <a href="https://console.cloud.google.com/" target="_blank" rel="noopener">console.cloud.google.com</a> and create or select a project.</li>
+                <li>In the left menu go to <strong>APIs &amp; Services → Library</strong>, search for <strong>Google Calendar API</strong>, and enable it.</li>
+                <li>Go to <strong>APIs &amp; Services → Credentials</strong> and click <strong>+ Create Credentials → OAuth client ID</strong>.</li>
+                <li>Set application type to <strong>Web application</strong>.</li>
+                <li>Under <strong>Authorised JavaScript origins</strong> add <code>http://localhost</code> (and any other origin you use, e.g. <code>http://localhost:3131</code>).</li>
+                <li>Click <strong>Create</strong> — copy the <strong>Client ID</strong> (ends in <code>.apps.googleusercontent.com</code>) and paste it below.</li>
+              </ol>
+            </details>
             <input class="settings-input" id="inputGoogleClientId" type="text" placeholder="xxx.apps.googleusercontent.com" autocomplete="off" spellcheck="false"/>
           </div>
           <div class="settings-field">
             <label class="settings-label">Spotify Client ID</label>
-            <div class="settings-hint">Spotify Developer Dashboard → your app → Settings. Add <code id="redirectUriDisplay"></code> as a Redirect URI.</div>
+            <div class="settings-hint">Required to connect Spotify. Your redirect URI is <code id="redirectUriDisplay"></code> — add it in your Spotify app settings.</div>
+            <details class="settings-steps">
+              <summary>How to get this</summary>
+              <ol>
+                <li>Go to <a href="https://developer.spotify.com/dashboard" target="_blank" rel="noopener">developer.spotify.com/dashboard</a> and log in.</li>
+                <li>Click <strong>Create app</strong>. Give it any name and description.</li>
+                <li>In the <strong>Redirect URIs</strong> field add <code id="redirectUriDisplay2"></code> — this must match exactly.</li>
+                <li>Set <strong>APIs used</strong> to <strong>Web API</strong>, accept the terms, and click <strong>Save</strong>.</li>
+                <li>Open your new app and go to <strong>Settings</strong> — copy the <strong>Client ID</strong> (32-character hex string) and paste it below.</li>
+              </ol>
+            </details>
             <input class="settings-input" id="inputSpotifyClientId" type="text" placeholder="32-character hex string" autocomplete="off" spellcheck="false"/>
           </div>
           <button class="settings-save-btn" id="btnSaveSettings">Save settings</button>
