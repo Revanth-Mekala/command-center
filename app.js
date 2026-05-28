@@ -31,13 +31,13 @@ function loadTasks() {
     { id:uid(), title:'Clear email inbox',         done:false, seat:false, orbit:false, timerLeft:DEFAULT_TASK_TIMER, timerTotal:DEFAULT_TASK_TIMER },
   ];
 }
-function saveTasks() { try { localStorage.setItem('cc_tasks', JSON.stringify(tasks)); } catch(e) {} }
+function saveTasks() { try { localStorage.setItem('cc_tasks', JSON.stringify(tasks.map(({timerDeadline,...t})=>t))); } catch(e) {} }
 
 let tasks = loadTasks();
 
 const DURATIONS = { work:25*60, short:5*60, long:15*60 };
 
-const pomo = { mode:'work', timeLeft:DURATIONS.work, running:false, sessions:0, interval:null };
+const pomo = { mode:'work', timeLeft:DURATIONS.work, running:false, sessions:0, interval:null, deadline:null };
 
 let dragSrc = null;
 let pendingLaunchTask  = null;  // task waiting for launch decision
@@ -279,12 +279,15 @@ function addTask() {
 function startTaskTimers() {
   if (taskTimerInterval) return;
   taskTimerInterval = setInterval(() => {
+    const now = Date.now();
     let needsRender = false;
     tasks.forEach(t => {
       if (!t.seat || t.orbit || t.done) return;
       if (pendingLaunchTask && pendingLaunchTask.id === t.id) return; // paused for modal
-      if (t.timerLeft > 0) {
-        t.timerLeft--;
+      if (!t.timerDeadline) t.timerDeadline = now + t.timerLeft * 1000;
+      const newLeft = Math.max(0, Math.round((t.timerDeadline - now) / 1000));
+      if (newLeft !== t.timerLeft) {
+        t.timerLeft = newLeft;
         needsRender = true;
         if (t.timerLeft === 0) {
           pendingLaunchTask = t;
@@ -293,7 +296,7 @@ function startTaskTimers() {
       }
     });
     if (needsRender) renderTakeoff();
-  }, 1000);
+  }, 500);
 }
 
 function showLaunchModal(task) {
@@ -318,6 +321,7 @@ document.getElementById('btnLaunchRefuel').addEventListener('click', () => {
   if (pendingLaunchTask) {
     pendingLaunchTask.timerLeft  = 5 * 60;
     pendingLaunchTask.timerTotal = Math.max(pendingLaunchTask.timerTotal, 5*60);
+    pendingLaunchTask.timerDeadline = Date.now() + 5 * 60 * 1000;
     pendingLaunchTask = null;
   }
   renderTakeoff();
@@ -331,6 +335,7 @@ fuelBtn.addEventListener('click', () => {
   const primary = seated[0];
   primary.timerLeft  += 5 * 60;
   primary.timerTotal  = primary.timerLeft; // reset progress bar to full
+  primary.timerDeadline = Date.now() + primary.timerLeft * 1000;
   fuelBtn.classList.add('clicked');
   setTimeout(() => fuelBtn.classList.remove('clicked'), 200);
   renderTakeoff();
@@ -481,6 +486,7 @@ function confirmSeat(mins) {
   t.seat = true;
   t.timerLeft  = mins * 60;
   t.timerTotal = mins * 60;
+  t.timerDeadline = Date.now() + mins * 60 * 1000;
   render();
   startTaskTimers();
 }
@@ -1067,18 +1073,19 @@ function renderTimer() {
 
 function startTimer() {
   pomo.running = true;
+  pomo.deadline = Date.now() + pomo.timeLeft * 1000;
   pomo.interval = setInterval(() => {
-    pomo.timeLeft--;
+    pomo.timeLeft = Math.max(0, Math.round((pomo.deadline - Date.now()) / 1000));
     renderTimer();
     if (pomo.timeLeft <= 0) {
-      clearInterval(pomo.interval); pomo.running = false;
+      clearInterval(pomo.interval); pomo.running = false; pomo.deadline = null;
       if (pomo.mode==='work') { pomo.sessions++; setMode(pomo.sessions%4===0?'long':'short'); }
       else setMode('work');
     }
-  }, 1000);
+  }, 500);
 }
 
-function pauseTimer() { clearInterval(pomo.interval); pomo.running=false; renderTimer(); }
+function pauseTimer() { clearInterval(pomo.interval); pomo.running=false; pomo.deadline=null; renderTimer(); }
 function resetTimer() { pauseTimer(); pomo.timeLeft=DURATIONS[pomo.mode]; renderTimer(); }
 function setMode(mode) {
   pauseTimer(); pomo.mode=mode; pomo.timeLeft=DURATIONS[mode];
@@ -1889,6 +1896,30 @@ async function fetchAudioFeatures(trackId) {
     vizLastBeatTime = Date.now();
   } catch(e) {}
 }
+
+/* ─── VISIBILITY CATCH-UP ───────────────────────────────────── */
+
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) return;
+  // Snap pomo timer to real elapsed time the moment tab becomes visible
+  if (pomo.running && pomo.deadline) {
+    pomo.timeLeft = Math.max(0, Math.round((pomo.deadline - Date.now()) / 1000));
+    renderTimer();
+    if (pomo.timeLeft <= 0) {
+      clearInterval(pomo.interval); pomo.running = false; pomo.deadline = null;
+      if (pomo.mode==='work') { pomo.sessions++; setMode(pomo.sessions%4===0?'long':'short'); }
+      else setMode('work');
+    }
+  }
+  // Snap task timers too
+  let needsRender = false;
+  tasks.forEach(t => {
+    if (!t.seat || !t.timerDeadline || t.orbit || t.done) return;
+    const newLeft = Math.max(0, Math.round((t.timerDeadline - Date.now()) / 1000));
+    if (newLeft !== t.timerLeft) { t.timerLeft = newLeft; needsRender = true; }
+  });
+  if (needsRender) renderTakeoff();
+});
 
 /* ─── BOOT ───────────────────────────────────────────────── */
 
