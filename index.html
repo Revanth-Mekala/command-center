@@ -118,14 +118,19 @@
         </svg>
         <span>Focus</span>
       </li>
-      <li class="nav-tab" data-tab="notes" title="Notes">
+      <li class="nav-tab" data-tab="notes" title="Vision Board">
         <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
-          <rect x="3" y="2" width="14" height="16" rx="2" stroke="currentColor" stroke-width="1.5"/>
-          <line x1="6.5" y1="7" x2="13.5" y2="7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-          <line x1="6.5" y1="10" x2="13.5" y2="10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-          <line x1="6.5" y1="13" x2="10" y2="13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          <circle cx="10" cy="10" r="3" stroke="currentColor" stroke-width="1.5"/>
+          <line x1="10" y1="2" x2="10" y2="6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          <line x1="10" y1="14" x2="10" y2="18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          <line x1="2" y1="10" x2="6" y2="10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          <line x1="14" y1="10" x2="18" y2="10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          <line x1="4.5" y1="4.5" x2="7.2" y2="7.2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          <line x1="12.8" y1="12.8" x2="15.5" y2="15.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          <line x1="15.5" y1="4.5" x2="12.8" y2="7.2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          <line x1="7.2" y1="12.8" x2="4.5" y2="15.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
         </svg>
-        <span>Notes</span>
+        <span>Vision</span>
       </li>
       <li class="nav-tab" data-tab="calendar" title="Calendar">
         <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
@@ -340,28 +345,71 @@
                 <clipPath id="hgBotClip">
                   <polygon points="45,92 55,92 90,162 10,162"/>
                 </clipPath>
+                <linearGradient id="hgShine" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%"   stop-color="rgba(255,255,255,0)"/>
+                  <stop offset="35%"  stop-color="rgba(255,255,255,0.07)"/>
+                  <stop offset="55%"  stop-color="rgba(255,255,255,0.12)"/>
+                  <stop offset="100%" stop-color="rgba(255,255,255,0)"/>
+                </linearGradient>
+                <linearGradient id="hgPillar" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%"   stop-color="#262626"/>
+                  <stop offset="40%"  stop-color="#1e1e1e"/>
+                  <stop offset="100%" stop-color="#161616"/>
+                </linearGradient>
               </defs>
-              <!-- top chamber frame -->
-              <polygon points="10,8 90,8 55,78 45,78"
-                       fill="#161616" stroke="#2e2e2e" stroke-width="1.5" stroke-linejoin="round"/>
-              <!-- bottom chamber frame -->
-              <polygon points="45,92 55,92 90,162 10,162"
-                       fill="#161616" stroke="#2e2e2e" stroke-width="1.5" stroke-linejoin="round"/>
-              <!-- neck sides -->
-              <line x1="45" y1="78" x2="45" y2="92" stroke="#2e2e2e" stroke-width="1.5"/>
-              <line x1="55" y1="78" x2="55" y2="92" stroke="#2e2e2e" stroke-width="1.5"/>
-              <!-- top cap bar -->
-              <rect x="6" y="3" width="88" height="7" rx="3.5" fill="#252525" stroke="#383838" stroke-width="0.5"/>
-              <!-- bottom cap bar -->
-              <rect x="6" y="162" width="88" height="7" rx="3.5" fill="#252525" stroke="#383838" stroke-width="0.5"/>
-              <!-- top sand (fills top-down, drains from waist end) -->
+
+              <!-- Left pillar -->
+              <rect x="1" y="5" width="8" height="162" rx="3.5" fill="url(#hgPillar)" stroke="#2e2e2e" stroke-width="0.5"/>
+              <rect x="3"   y="8" width="2"  height="156" rx="1" fill="rgba(255,255,255,0.05)"/>
+              <!-- Right pillar -->
+              <rect x="91" y="5" width="8" height="162" rx="3.5" fill="url(#hgPillar)" stroke="#2e2e2e" stroke-width="0.5"/>
+              <rect x="93" y="8" width="2"  height="156" rx="1" fill="rgba(255,255,255,0.05)"/>
+
+              <!-- Top cap -->
+              <rect x="0" y="0" width="100" height="12" rx="5" fill="#272727" stroke="#3c3c3c" stroke-width="0.5"/>
+              <rect x="2" y="1.5" width="96" height="5" rx="2.5" fill="rgba(255,255,255,0.08)"/>
+              <!-- Top cap screws -->
+              <circle cx="14" cy="6" r="2.4" fill="#1a1a1a" stroke="#3a3a3a" stroke-width="0.5"/>
+              <line x1="12.8" y1="6" x2="15.2" y2="6" stroke="#2e2e2e" stroke-width="0.7"/>
+              <line x1="14"   y1="4.8" x2="14" y2="7.2" stroke="#2e2e2e" stroke-width="0.7"/>
+              <circle cx="86" cy="6" r="2.4" fill="#1a1a1a" stroke="#3a3a3a" stroke-width="0.5"/>
+              <line x1="84.8" y1="6" x2="87.2" y2="6" stroke="#2e2e2e" stroke-width="0.7"/>
+              <line x1="86"   y1="4.8" x2="86" y2="7.2" stroke="#2e2e2e" stroke-width="0.7"/>
+
+              <!-- Bottom cap -->
+              <rect x="0" y="160" width="100" height="12" rx="5" fill="#272727" stroke="#3c3c3c" stroke-width="0.5"/>
+              <rect x="2" y="161.5" width="96" height="5" rx="2.5" fill="rgba(255,255,255,0.08)"/>
+              <!-- Bottom cap screws -->
+              <circle cx="14" cy="166" r="2.4" fill="#1a1a1a" stroke="#3a3a3a" stroke-width="0.5"/>
+              <line x1="12.8" y1="166" x2="15.2" y2="166" stroke="#2e2e2e" stroke-width="0.7"/>
+              <line x1="14"   y1="164.8" x2="14" y2="167.2" stroke="#2e2e2e" stroke-width="0.7"/>
+              <circle cx="86" cy="166" r="2.4" fill="#1a1a1a" stroke="#3a3a3a" stroke-width="0.5"/>
+              <line x1="84.8" y1="166" x2="87.2" y2="166" stroke="#2e2e2e" stroke-width="0.7"/>
+              <line x1="86"   y1="164.8" x2="86" y2="167.2" stroke="#2e2e2e" stroke-width="0.7"/>
+
+              <!-- Top chamber glass -->
+              <polygon points="10,8 90,8 55,78 45,78" fill="#10141a" stroke="#262626" stroke-width="1" stroke-linejoin="round"/>
+              <!-- Bottom chamber glass -->
+              <polygon points="45,92 55,92 90,162 10,162" fill="#10141a" stroke="#262626" stroke-width="1" stroke-linejoin="round"/>
+
+              <!-- Neck -->
+              <rect x="45" y="78" width="10" height="14" fill="#10141a"/>
+              <line x1="45" y1="78" x2="45" y2="92" stroke="#262626" stroke-width="1.2"/>
+              <line x1="55" y1="78" x2="55" y2="92" stroke="#262626" stroke-width="1.2"/>
+
+              <!-- Top sand -->
               <rect id="hgTopSand" x="0" y="8" width="100" height="70"
                     clip-path="url(#hgTopClip)" fill="#f0f0f0" opacity="0.88"/>
-              <!-- bottom sand (accumulates from bottom up) -->
+              <!-- Bottom sand -->
               <rect id="hgBotSand" x="0" y="162" width="100" height="0"
                     clip-path="url(#hgBotClip)" fill="#f0f0f0" opacity="0.88"/>
-              <!-- falling sand particles (in neck, animated when running) -->
-              <circle class="hg-particle"     cx="50" cy="80" r="1.5" fill="rgba(255,255,255,0.9)"/>
+
+              <!-- Glass shine overlay -->
+              <polygon points="10,8 90,8 55,78 45,78" fill="url(#hgShine)"/>
+              <polygon points="45,92 55,92 90,162 10,162" fill="url(#hgShine)" opacity="0.5"/>
+
+              <!-- Falling sand particles -->
+              <circle class="hg-particle"      cx="50" cy="80" r="1.5" fill="rgba(255,255,255,0.9)"/>
               <circle class="hg-particle hg-p2" cx="50" cy="80" r="1.5" fill="rgba(255,255,255,0.7)"/>
               <circle class="hg-particle hg-p3" cx="50" cy="80" r="1.5" fill="rgba(255,255,255,0.5)"/>
             </svg>
@@ -388,6 +436,9 @@
 
           <!-- MEDIA -->
           <div class="col-divider"></div>
+
+          <!-- Visualizer -->
+          <canvas id="spVizCanvas" class="sp-visualizer" width="220" height="36"></canvas>
 
           <div class="media-tabs">
             <button class="media-tab active" data-media="spotify">
@@ -467,32 +518,22 @@
       </div><!-- /focus-body -->
     </div><!-- /tab-focus -->
 
-    <!-- NOTES -->
+    <!-- VISION BOARD (replaces Notes) -->
     <div class="tab-panel" id="tab-notes">
-      <div class="notes-body">
-        <!-- ── Vertical notebook sidebar ── -->
-        <div class="nb-sidebar">
-          <div class="nb-sidebar-header">Notebooks</div>
-          <div class="nb-sidebar-list" id="nbSidebarList"></div>
-          <button class="nb-add-btn" id="btnAddNotebook">+ Notebook</button>
+      <div class="vb-body">
+        <div class="vb-sidebar">
+          <div class="vb-sidebar-header">Vision Boards</div>
+          <div class="vb-sidebar-list" id="vbSidebarList"></div>
+          <button class="vb-add-btn" id="btnAddVbBoard">+ New Board</button>
         </div>
-        <!-- ── Main workspace ── -->
-        <div class="nb-main" id="nbMain">
-          <div class="nb-empty-state" id="nbEmptyState">
-            <span class="nb-empty-icon">📓</span>
-            <span>Select a notebook or create one</span>
-          </div>
-          <div class="nb-workspace" id="nbWorkspace" style="display:none">
-            <!-- Horizontal section tabs -->
-            <div class="nb-tabs-bar" id="nbTabsBar">
-              <div class="nb-tabs-scroll" id="nbTabsScroll"></div>
-              <button class="nb-add-tab-btn" id="btnAddNbTab">+ Section</button>
-            </div>
-            <!-- Content (tasks + notes stacked) -->
-            <div class="nb-content" id="nbContent"></div>
+        <div class="vb-canvas-area" id="vbCanvasArea">
+          <div class="vb-canvas-empty" id="vbCanvasEmpty">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" opacity=".18"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5"/><line x1="12" y1="8" x2="12" y2="16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="8" y1="12" x2="16" y2="12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            <span>Create a board to get started</span>
           </div>
         </div>
       </div>
+      <input type="file" id="vbImageInput" accept="image/*" style="display:none"/>
     </div>
 
     <!-- CALENDAR -->
@@ -519,6 +560,7 @@
           <div class="cal-toolbar">
             <span class="cal-toolbar-label">Upcoming — next 14 days</span>
             <div class="cal-toolbar-actions">
+              <button class="cal-new-event-btn" id="btnCalNewEvent">+ Event</button>
               <button class="cal-import-all-btn" id="btnCalImportAll">Import all as tasks</button>
               <button class="cal-disconnect-btn" id="btnCalDisconnect">Disconnect</button>
             </div>
@@ -538,7 +580,35 @@
     <div class="tab-panel" id="tab-settings">
       <div class="panel-header"><h1 class="panel-title">Settings</h1></div>
       <div class="settings-body">
+
+        <!-- THEMES -->
         <div class="settings-group">
+          <div class="settings-group-title">Themes</div>
+          <div class="theme-swatches" id="themeSwatches">
+            <button class="theme-swatch" data-theme="dark">
+              <span class="theme-preview" style="background:#0d0d0d;border-color:#333"></span>
+              <span class="theme-label">Dark</span>
+            </button>
+            <button class="theme-swatch" data-theme="midnight">
+              <span class="theme-preview" style="background:#000000;border-color:#1a1a1a"></span>
+              <span class="theme-label">Midnight</span>
+            </button>
+            <button class="theme-swatch" data-theme="ember">
+              <span class="theme-preview" style="background:#0c0906;border-color:#3d2b1e"></span>
+              <span class="theme-label">Ember</span>
+            </button>
+            <button class="theme-swatch" data-theme="forest">
+              <span class="theme-preview" style="background:#080c08;border-color:#2d3d2d"></span>
+              <span class="theme-label">Forest</span>
+            </button>
+            <button class="theme-swatch" data-theme="ocean">
+              <span class="theme-preview" style="background:#07090d;border-color:#2d3d50"></span>
+              <span class="theme-label">Ocean</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="settings-group" style="margin-top:28px">
           <div class="settings-group-title">Integrations</div>
           <div class="settings-field">
             <label class="settings-label">Google Client ID</label>
@@ -552,11 +622,59 @@
           </div>
           <button class="settings-save-btn" id="btnSaveSettings">Save settings</button>
           <div class="settings-saved-msg" id="settingsSavedMsg" style="display:none">Saved ✓</div>
-        </div>
-      </div>
-    </div>
+        </div><!-- /integrations group -->
+      </div><!-- /settings-body -->
+    </div><!-- /tab-settings -->
 
   </main>
+
+  <!-- ── CALENDAR CREATE EVENT MODAL ──────────────────── -->
+  <div id="calCreateOverlay" class="cal-create-overlay" style="display:none">
+    <div class="cal-create-card">
+      <div class="cal-create-header">
+        <span class="cal-create-title">New Calendar Event</span>
+        <button class="cal-create-close" id="btnCalCreateClose">×</button>
+      </div>
+      <div class="cal-create-form">
+        <input class="cal-create-input" id="calEvTitle" type="text" placeholder="Event title" autocomplete="off"/>
+        <input class="cal-create-input" id="calEvDate" type="date"/>
+        <div class="cal-create-row">
+          <input class="cal-create-input" id="calEvStart" type="time"/>
+          <span class="cal-create-sep">→</span>
+          <input class="cal-create-input" id="calEvEnd" type="time"/>
+        </div>
+        <textarea class="cal-create-input cal-create-textarea" id="calEvDesc" placeholder="Description (optional)" rows="2"></textarea>
+      </div>
+      <div class="cal-create-actions">
+        <button class="cal-create-btn-primary" id="btnCalCreateSave">Create Event</button>
+        <button class="cal-create-btn-cancel" id="btnCalCreateCancel">Cancel</button>
+      </div>
+      <div class="cal-create-status" id="calCreateStatus"></div>
+    </div>
+  </div>
+
+  <!-- ── MINESWEEPER BREAK GAME ─────────────────────────── -->
+  <div id="minesweeperOverlay" class="ms-overlay" style="display:none">
+    <div class="ms-modal" id="msModal">
+      <div class="ms-header">
+        <div class="ms-diff-tabs">
+          <button class="ms-diff-btn active" data-diff="easy">Easy</button>
+          <button class="ms-diff-btn" data-diff="medium">Medium</button>
+          <button class="ms-diff-btn" data-diff="hard">Hard</button>
+        </div>
+        <div class="ms-hud">
+          <span class="ms-stat" id="msFlagCounter">⚑ 10</span>
+          <button class="ms-face-btn" id="msFaceBtn" title="New game">🙂</button>
+          <span class="ms-stat" id="msTimerDisplay">0:00</span>
+        </div>
+        <button class="ms-close-btn" id="btnMsClose">×</button>
+      </div>
+      <div class="ms-board-wrap">
+        <div class="ms-board" id="msBoard"></div>
+      </div>
+    </div>
+  </div>
+
 </div>
 <script src="app.js"></script>
 </body>

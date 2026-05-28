@@ -18,13 +18,22 @@ const pencilSVG = `<svg width="10" height="10" viewBox="0 0 12 12" fill="none"><
 
 const DEFAULT_TASK_TIMER = 25 * 60;
 
-let tasks = [
-  { id:uid(), title:'Plan the week ahead',       done:false, seat:false, orbit:false, timerLeft:DEFAULT_TASK_TIMER, timerTotal:DEFAULT_TASK_TIMER },
-  { id:uid(), title:'Review open pull requests', done:false, seat:false, orbit:false, timerLeft:DEFAULT_TASK_TIMER, timerTotal:DEFAULT_TASK_TIMER },
-  { id:uid(), title:'Write release notes',       done:false, seat:false, orbit:false, timerLeft:DEFAULT_TASK_TIMER, timerTotal:DEFAULT_TASK_TIMER },
-  { id:uid(), title:'Update project roadmap',    done:false, seat:false, orbit:false, timerLeft:DEFAULT_TASK_TIMER, timerTotal:DEFAULT_TASK_TIMER },
-  { id:uid(), title:'Clear email inbox',         done:false, seat:false, orbit:false, timerLeft:DEFAULT_TASK_TIMER, timerTotal:DEFAULT_TASK_TIMER },
-];
+function loadTasks() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('cc_tasks') || 'null');
+    if (Array.isArray(saved) && saved.length > 0) return saved;
+  } catch(e) {}
+  return [
+    { id:uid(), title:'Plan the week ahead',       done:false, seat:false, orbit:false, timerLeft:DEFAULT_TASK_TIMER, timerTotal:DEFAULT_TASK_TIMER },
+    { id:uid(), title:'Review open pull requests', done:false, seat:false, orbit:false, timerLeft:DEFAULT_TASK_TIMER, timerTotal:DEFAULT_TASK_TIMER },
+    { id:uid(), title:'Write release notes',       done:false, seat:false, orbit:false, timerLeft:DEFAULT_TASK_TIMER, timerTotal:DEFAULT_TASK_TIMER },
+    { id:uid(), title:'Update project roadmap',    done:false, seat:false, orbit:false, timerLeft:DEFAULT_TASK_TIMER, timerTotal:DEFAULT_TASK_TIMER },
+    { id:uid(), title:'Clear email inbox',         done:false, seat:false, orbit:false, timerLeft:DEFAULT_TASK_TIMER, timerTotal:DEFAULT_TASK_TIMER },
+  ];
+}
+function saveTasks() { try { localStorage.setItem('cc_tasks', JSON.stringify(tasks)); } catch(e) {} }
+
+let tasks = loadTasks();
 
 const DURATIONS = { work:25*60, short:5*60, long:15*60 };
 
@@ -71,6 +80,34 @@ function saveYtHistory() {
   localStorage.setItem('yt_history', JSON.stringify(ytHistory));
 }
 
+/* ─── MINESWEEPER STATE ──────────────────────────────────── */
+
+const MS_DIFF = {
+  easy:   { rows: 9,  cols: 9,  mines: 10 },
+  medium: { rows: 16, cols: 16, mines: 40 },
+  hard:   { rows: 16, cols: 30, mines: 99 },
+};
+
+// B&W gradient: 1 = dim, 8 = bright white
+const MS_COLORS = [
+  '',
+  'rgba(255,255,255,0.40)',
+  'rgba(255,255,255,0.52)',
+  'rgba(255,255,255,0.68)',
+  'rgba(255,255,255,0.58)',
+  'rgba(255,255,255,0.76)',
+  'rgba(255,255,255,0.84)',
+  'rgba(255,255,255,0.92)',
+  '#ffffff',
+];
+
+let ms = {
+  board: [], rows: 9, cols: 9, mines: 10,
+  state: 'idle',   // idle | playing | won | lost
+  firstClick: true, timer: 0, timerInterval: null,
+  flagsPlaced: 0, diff: 'easy',
+};
+
 /* ─── DOM ────────────────────────────────────────────────── */
 
 const takeoffZone      = document.getElementById('takeoffZone');
@@ -96,6 +133,7 @@ const focusName        = document.getElementById('pomodoroFocusName');
 /* ─── RENDER ─────────────────────────────────────────────── */
 
 function render() {
+  saveTasks();
   renderTakeoff();
   renderLaunchpad();
   renderOrbit();
@@ -543,6 +581,7 @@ function renderNbWorkspace() {
   if (!nb.tabs.find(t => t.id === activeNbTabId)) activeNbTabId = nb.tabs[0]?.id || null;
 
   const scroll = document.getElementById('nbTabsScroll');
+  if (!scroll) return;
   scroll.innerHTML = '';
   nb.tabs.forEach(tab => {
     const wrap = document.createElement('div');
@@ -749,7 +788,7 @@ function renderNbContent(nb, tab) {
   content.appendChild(notesSection);
 }
 
-document.getElementById('btnAddNotebook').addEventListener('click', () => {
+document.getElementById('btnAddNotebook')?.addEventListener('click', () => {
   const color = NB_COLORS[notebooks.length % NB_COLORS.length];
   const nb = { id: uid(), name: 'New Notebook', color, tabs: [{ id: uid(), name: 'Main', tasks: [], notes: '' }] };
   notebooks.push(nb);
@@ -762,7 +801,7 @@ document.getElementById('btnAddNotebook').addEventListener('click', () => {
   });
 });
 
-document.getElementById('btnAddNbTab').addEventListener('click', () => {
+document.getElementById('btnAddNbTab')?.addEventListener('click', () => {
   const nb = notebooks.find(n => n.id === activeNotebookId);
   if (!nb) return;
   const tab = { id: uid(), name: 'Section', tasks: [], notes: '' };
@@ -770,6 +809,225 @@ document.getElementById('btnAddNbTab').addEventListener('click', () => {
   activeNbTabId = tab.id;
   saveNotebooks(); renderNbWorkspace();
 });
+
+/* ─── MINESWEEPER ────────────────────────────────────────── */
+
+function msInit(diff) {
+  diff = diff || ms.diff || 'easy';
+  const d = MS_DIFF[diff];
+  clearInterval(ms.timerInterval);
+  ms = {
+    board: [], rows: d.rows, cols: d.cols, mines: d.mines,
+    state: 'idle', firstClick: true, timer: 0,
+    timerInterval: null, flagsPlaced: 0, diff,
+  };
+  for (let r = 0; r < d.rows; r++) {
+    ms.board[r] = [];
+    for (let c = 0; c < d.cols; c++)
+      ms.board[r][c] = { mine:false, revealed:false, flagged:false, count:0, hitMine:false };
+  }
+  const modal = document.getElementById('msModal');
+  const cellPx = { easy:34, medium:26, hard:20 }[diff];
+  if (modal) modal.style.setProperty('--ms-cs', cellPx + 'px');
+  const faceEl = document.getElementById('msFaceBtn');
+  if (faceEl) faceEl.textContent = '🙂';
+  const timerEl = document.getElementById('msTimerDisplay');
+  if (timerEl) timerEl.textContent = '0:00';
+  const flagEl = document.getElementById('msFlagCounter');
+  if (flagEl) flagEl.textContent = '⚑ ' + d.mines;
+  msRender();
+}
+
+function msPlaceMines(safeR, safeC) {
+  // Avoid 3×3 area around first click so it's never instant death
+  const safe = new Set();
+  for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) {
+    const nr = safeR + dr, nc = safeC + dc;
+    if (nr >= 0 && nr < ms.rows && nc >= 0 && nc < ms.cols)
+      safe.add(nr * ms.cols + nc);
+  }
+  let placed = 0;
+  while (placed < ms.mines) {
+    const idx = Math.floor(Math.random() * ms.rows * ms.cols);
+    const r = Math.floor(idx / ms.cols), c = idx % ms.cols;
+    if (!safe.has(idx) && !ms.board[r][c].mine) { ms.board[r][c].mine = true; placed++; }
+  }
+  // Calculate neighbour counts
+  for (let r = 0; r < ms.rows; r++) for (let c = 0; c < ms.cols; c++) {
+    if (ms.board[r][c].mine) continue;
+    let cnt = 0;
+    for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) {
+      if (!dr && !dc) continue;
+      const nr = r+dr, nc = c+dc;
+      if (nr >= 0 && nr < ms.rows && nc >= 0 && nc < ms.cols && ms.board[nr][nc].mine) cnt++;
+    }
+    ms.board[r][c].count = cnt;
+  }
+}
+
+function msFloodReveal(startR, startC) {
+  // Iterative flood fill — safe for large boards
+  const queue = [[startR, startC]], seen = new Set();
+  while (queue.length) {
+    const [r, c] = queue.shift();
+    const key = r * ms.cols + c;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const cell = ms.board[r][c];
+    if (cell.revealed || cell.flagged || cell.mine) continue;
+    cell.revealed = true;
+    if (cell.count === 0) {
+      for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) {
+        if (!dr && !dc) continue;
+        const nr = r+dr, nc = c+dc;
+        if (nr >= 0 && nr < ms.rows && nc >= 0 && nc < ms.cols) queue.push([nr, nc]);
+      }
+    }
+  }
+}
+
+function msCheckWin() {
+  for (let r = 0; r < ms.rows; r++)
+    for (let c = 0; c < ms.cols; c++)
+      if (!ms.board[r][c].mine && !ms.board[r][c].revealed) return false;
+  return true;
+}
+
+function msRevealCell(r, c) {
+  if (ms.state === 'won' || ms.state === 'lost') return;
+  const cell = ms.board[r][c];
+  if (cell.revealed || cell.flagged) return;
+
+  // First click: place mines now (guarantees safe first click)
+  if (ms.firstClick) {
+    ms.firstClick = false;
+    msPlaceMines(r, c);
+    ms.state = 'playing';
+    ms.timerInterval = setInterval(() => {
+      ms.timer++;
+      const el = document.getElementById('msTimerDisplay');
+      if (el) el.textContent = fmtTime(ms.timer);
+    }, 1000);
+  }
+
+  // Hit a mine
+  if (cell.mine) {
+    cell.revealed = true; cell.hitMine = true;
+    ms.state = 'lost';
+    clearInterval(ms.timerInterval);
+    // Reveal all un-flagged mines
+    for (let rr = 0; rr < ms.rows; rr++) for (let cc = 0; cc < ms.cols; cc++)
+      if (ms.board[rr][cc].mine && !ms.board[rr][cc].flagged) ms.board[rr][cc].revealed = true;
+    const fb = document.getElementById('msFaceBtn');
+    if (fb) fb.textContent = '💀';
+    msRender(); return;
+  }
+
+  msFloodReveal(r, c);
+
+  if (msCheckWin()) {
+    ms.state = 'won';
+    clearInterval(ms.timerInterval);
+    const fb = document.getElementById('msFaceBtn');
+    if (fb) fb.textContent = '😎';
+    // Auto-flag remaining mines
+    for (let rr = 0; rr < ms.rows; rr++) for (let cc = 0; cc < ms.cols; cc++)
+      if (ms.board[rr][cc].mine) ms.board[rr][cc].flagged = true;
+    ms.flagsPlaced = ms.mines;
+  }
+
+  msRender();
+}
+
+function msToggleFlag(r, c) {
+  // Can only flag after the first click reveals the board
+  if (ms.state !== 'playing') return;
+  const cell = ms.board[r][c];
+  if (cell.revealed) return;
+  cell.flagged = !cell.flagged;
+  ms.flagsPlaced += cell.flagged ? 1 : -1;
+  const el = document.getElementById('msFlagCounter');
+  if (el) el.textContent = '⚑ ' + (ms.mines - ms.flagsPlaced);
+  msRender();
+}
+
+function msChord(r, c) {
+  // Double-click on a revealed number: if flagged neighbours = count, reveal the rest
+  if (ms.state !== 'playing') return;
+  const cell = ms.board[r][c];
+  if (!cell.revealed || cell.count === 0) return;
+  let flags = 0; const toReveal = [];
+  for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) {
+    if (!dr && !dc) continue;
+    const nr = r+dr, nc = c+dc;
+    if (nr >= 0 && nr < ms.rows && nc >= 0 && nc < ms.cols) {
+      const n = ms.board[nr][nc];
+      if (n.flagged) flags++;
+      else if (!n.revealed) toReveal.push([nr, nc]);
+    }
+  }
+  if (flags !== cell.count) return; // not enough flags — do nothing
+  toReveal.forEach(([nr, nc]) => msRevealCell(nr, nc));
+}
+
+function msRender() {
+  const el = document.getElementById('msBoard');
+  if (!el) return;
+  el.className = `ms-board ms-board-${ms.diff}`;
+  el.style.gridTemplateColumns = `repeat(${ms.cols}, var(--ms-cs, 26px))`;
+  el.innerHTML = '';
+
+  for (let r = 0; r < ms.rows; r++) {
+    for (let c = 0; c < ms.cols; c++) {
+      const cell = ms.board[r][c];
+      const div = document.createElement('div');
+      div.className = 'ms-cell';
+
+      if (cell.revealed) {
+        div.classList.add('ms-cell-open');
+        if (cell.mine) {
+          div.classList.add(cell.hitMine ? 'ms-cell-boom' : 'ms-cell-mine');
+          div.textContent = '●';
+        } else if (cell.count > 0) {
+          div.textContent = cell.count;
+          div.style.color = MS_COLORS[cell.count];
+        }
+      } else if (cell.flagged) {
+        div.classList.add('ms-cell-flag');
+        // Wrong flag (flagged non-mine) shown dimmed/struck on loss
+        if (ms.state === 'lost' && !cell.mine) div.classList.add('ms-cell-wrong');
+        div.textContent = '⚑';
+      }
+
+      // Left click = reveal | right click = flag | double click = chord
+      div.addEventListener('click',       () => msRevealCell(r, c));
+      div.addEventListener('contextmenu', e  => { e.preventDefault(); msToggleFlag(r, c); });
+      div.addEventListener('dblclick',    () => msChord(r, c));
+      el.appendChild(div);
+    }
+  }
+}
+
+function openMinesweeper() {
+  const overlay = document.getElementById('minesweeperOverlay');
+  if (!overlay) return;
+  overlay.style.display = 'flex';
+  // Init on first open; keep an in-progress game alive between opens
+  if (!ms.board.length) msInit('easy');
+  else msRender();
+}
+
+// MS button wiring
+document.getElementById('msFaceBtn').addEventListener('click', () => msInit());
+document.getElementById('btnMsClose').addEventListener('click', () => {
+  document.getElementById('minesweeperOverlay').style.display = 'none';
+});
+document.getElementById('minesweeperOverlay').addEventListener('contextmenu', e => e.preventDefault());
+document.querySelectorAll('.ms-diff-btn').forEach(btn => btn.addEventListener('click', () => {
+  document.querySelectorAll('.ms-diff-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  msInit(btn.dataset.diff);
+}));
 
 /* ─── POMODORO ───────────────────────────────────────────── */
 
@@ -830,7 +1088,10 @@ function setMode(mode) {
 
 btnStartPause.addEventListener('click', ()=>pomo.running?pauseTimer():startTimer());
 btnReset.addEventListener('click', resetTimer);
-document.querySelectorAll('.pomo-mode').forEach(btn=>btn.addEventListener('click',()=>setMode(btn.dataset.mode)));
+document.querySelectorAll('.pomo-mode').forEach(btn => btn.addEventListener('click', () => {
+  setMode(btn.dataset.mode);
+  if (btn.dataset.mode === 'short' || btn.dataset.mode === 'long') openMinesweeper();
+}));
 
 /* ─── TAB SWITCHING ──────────────────────────────────────── */
 
@@ -944,7 +1205,7 @@ function initGoogleAuth() {
   if (!clientId || typeof google==='undefined') return;
   googleTokenClient = google.accounts.oauth2.initTokenClient({
     client_id: clientId,
-    scope: 'https://www.googleapis.com/auth/calendar.readonly',
+    scope: 'https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar.readonly',
     callback: async resp => {
       if (resp.error) return;
       googleToken = resp.access_token;
@@ -1115,9 +1376,14 @@ function updateSpotifyDisplay(data){
     playIcon.innerHTML='<path d="M8 5v14l11-7z"/>';
     spProgressMs=0; spDurationMs=0; spIsPlaying=false; renderSpotifyProgress(); return;
   }
-  const{name,artists,album,duration_ms}=data.item;
+  const{name,artists,album,duration_ms,id:trackId}=data.item;
   trackEl.textContent=name; artistEl.textContent=artists.map(a=>a.name).join(', ');
   artEl.src=album.images.slice(-1)[0]?.url||'';
+  // Fetch audio features for visualizer (only when track changes)
+  if (trackId && trackId !== (window._lastVizTrackId||'')) {
+    window._lastVizTrackId = trackId;
+    fetchAudioFeatures(trackId);
+  }
   spProgressMs=data.progress_ms||0; spDurationMs=duration_ms||0; spIsPlaying=data.is_playing;
   playIcon.innerHTML=data.is_playing?'<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>':'<path d="M8 5v14l11-7z"/>';
   renderSpotifyProgress();
@@ -1167,17 +1433,476 @@ document.getElementById('spProgressTrack').addEventListener('click', async e => 
   spProgressMs = ms; renderSpotifyProgress();
 });
 
+/* ─── THEMES ─────────────────────────────────────────────── */
+
+const THEMES = {
+  dark:     { '--bg':'#0d0d0d','--bg2':'#111111','--surface':'#161616','--surface2':'#1c1c1c','--card':'#1e1e1e','--card-hi':'#252525','--border':'#262626','--border2':'#333333','--text':'#f0f0f0','--text2':'#888888','--text3':'#444444' },
+  midnight: { '--bg':'#000000','--bg2':'#080808','--surface':'#0d0d0d','--surface2':'#111111','--card':'#141414','--card-hi':'#1a1a1a','--border':'#1a1a1a','--border2':'#252525','--text':'#e8e8e8','--text2':'#777777','--text3':'#363636' },
+  ember:    { '--bg':'#0c0906','--bg2':'#110d09','--surface':'#170f0b','--surface2':'#1e140e','--card':'#231810','--card-hi':'#2a1d14','--border':'#2a1d14','--border2':'#3d2b1e','--text':'#f0e8e0','--text2':'#9e7c6a','--text3':'#5c4030' },
+  forest:   { '--bg':'#080c08','--bg2':'#0c110c','--surface':'#101610','--surface2':'#151c15','--card':'#182018','--card-hi':'#1e281e','--border':'#1e281e','--border2':'#2d3d2d','--text':'#e8f0e8','--text2':'#7a9e7a','--text3':'#3d5c3d' },
+  ocean:    { '--bg':'#07090d','--bg2':'#0b0e12','--surface':'#0f1318','--surface2':'#141920','--card':'#181f28','--card-hi':'#1e2730','--border':'#1e2730','--border2':'#2d3d50','--text':'#e0eaf5','--text2':'#6a8fae','--text3':'#3d5570' },
+};
+
+function applyTheme(key) {
+  const t = THEMES[key]; if (!t) return;
+  Object.entries(t).forEach(([k,v]) => document.documentElement.style.setProperty(k,v));
+  localStorage.setItem('cc_theme', key);
+  document.querySelectorAll('.theme-swatch').forEach(s => s.classList.toggle('active', s.dataset.theme===key));
+}
+
+function loadTheme() { applyTheme(localStorage.getItem('cc_theme') || 'dark'); }
+
+document.querySelectorAll('.theme-swatch').forEach(btn => {
+  btn.addEventListener('click', () => applyTheme(btn.dataset.theme));
+});
+
+/* ─── CALENDAR CREATE EVENT ──────────────────────────────── */
+
+document.getElementById('btnCalNewEvent')?.addEventListener('click', () => {
+  // Pre-fill date to today
+  const today = new Date().toISOString().slice(0,10);
+  document.getElementById('calEvDate').value  = today;
+  document.getElementById('calEvStart').value = '09:00';
+  document.getElementById('calEvEnd').value   = '10:00';
+  document.getElementById('calEvTitle').value = '';
+  document.getElementById('calEvDesc').value  = '';
+  document.getElementById('calCreateStatus').textContent = '';
+  document.getElementById('calCreateOverlay').style.display = 'flex';
+});
+
+document.getElementById('btnCalCreateClose')?.addEventListener('click', () => {
+  document.getElementById('calCreateOverlay').style.display = 'none';
+});
+document.getElementById('btnCalCreateCancel')?.addEventListener('click', () => {
+  document.getElementById('calCreateOverlay').style.display = 'none';
+});
+
+document.getElementById('btnCalCreateSave')?.addEventListener('click', async () => {
+  const title = document.getElementById('calEvTitle').value.trim();
+  const date  = document.getElementById('calEvDate').value;
+  const start = document.getElementById('calEvStart').value;
+  const end   = document.getElementById('calEvEnd').value;
+  const desc  = document.getElementById('calEvDesc').value.trim();
+  const status = document.getElementById('calCreateStatus');
+
+  if (!title) { status.style.color='#e87'; status.textContent='Title is required'; return; }
+  if (!date)  { status.style.color='#e87'; status.textContent='Date is required'; return; }
+
+  const btn = document.getElementById('btnCalCreateSave');
+  btn.disabled = true; btn.textContent = 'Creating…';
+  status.style.color='var(--text2)'; status.textContent = '';
+
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const body = {
+    summary: title,
+    description: desc || undefined,
+    start: start ? { dateTime:`${date}T${start}:00`, timeZone:tz } : { date },
+    end:   end   ? { dateTime:`${date}T${end}:00`,   timeZone:tz } : { date },
+  };
+
+  try {
+    const res = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
+      method: 'POST',
+      headers: { 'Authorization':`Bearer ${googleToken}`, 'Content-Type':'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (res.ok) {
+      status.style.color='var(--green)'; status.textContent='Event created ✓';
+      await loadCalendarEvents();
+      setTimeout(() => { document.getElementById('calCreateOverlay').style.display='none'; }, 900);
+    } else {
+      const err = await res.json().catch(()=>({}));
+      status.style.color='#e87'; status.textContent = err.error?.message || 'Failed to create event';
+    }
+  } catch(e) {
+    status.style.color='#e87'; status.textContent = 'Network error';
+  }
+  btn.disabled = false; btn.textContent = 'Create Event';
+});
+
+/* ─── VISION BOARD ───────────────────────────────────────── */
+
+let vbBoards = [];
+let vbActiveId = null;
+let vbDraggingBubble = null;
+let vbPanningState   = null;
+
+document.addEventListener('mousemove', e => {
+  if (vbDraggingBubble) {
+    const {bubble, startX, startY, startBX, startBY, el} = vbDraggingBubble;
+    bubble.x = startBX + (e.clientX - startX);
+    bubble.y = startBY + (e.clientY - startY);
+    el.style.left = bubble.x + 'px';
+    el.style.top  = bubble.y + 'px';
+    const line = document.getElementById(`vbLine_${bubble.id}`);
+    if (line) {
+      line.setAttribute('x2', bubble.x + Math.floor((bubble.w||180)/2));
+      line.setAttribute('y2', bubble.y + Math.floor((bubble.h||100)/2));
+    }
+  }
+  if (vbPanningState) {
+    const {board, startX, startY, startPanX, startPanY} = vbPanningState;
+    board.panX = startPanX + (e.clientX - startX);
+    board.panY = startPanY + (e.clientY - startY);
+    const pan = document.getElementById('vbPan');
+    if (pan) pan.style.transform = `translate(${board.panX}px,${board.panY}px)`;
+  }
+});
+
+document.addEventListener('mouseup', () => {
+  if (vbDraggingBubble) { saveVb(); vbDraggingBubble = null; }
+  if (vbPanningState) {
+    saveVb();
+    vbPanningState = null;
+    const area = document.getElementById('vbCanvasArea');
+    if (area) area.classList.remove('panning');
+  }
+});
+
+function loadVb() {
+  try { vbBoards = JSON.parse(localStorage.getItem('vb_boards') || '[]'); } catch(e) { vbBoards = []; }
+  if (!vbBoards.length) {
+    vbBoards = [{ id:uid(), name:'My Vision', panX:0, panY:0, vision:{title:'My Goal',img:''}, bubbles:[] }];
+  }
+  if (!vbActiveId || !vbBoards.find(b=>b.id===vbActiveId)) vbActiveId = vbBoards[0]?.id || null;
+}
+
+function saveVb() { try { localStorage.setItem('vb_boards', JSON.stringify(vbBoards)); } catch(e) {} }
+
+function vbGetActive() { return vbBoards.find(b=>b.id===vbActiveId); }
+
+function renderVbSidebar() {
+  const list = document.getElementById('vbSidebarList');
+  if (!list) return;
+  list.innerHTML = '';
+  vbBoards.forEach(b => {
+    const item = document.createElement('div');
+    item.className = 'vb-sidebar-item' + (b.id===vbActiveId ? ' active' : '');
+    item.innerHTML = `<span class="vb-sidebar-item-name">${esc(b.name)}</span>
+      <button class="nb-del" title="Delete">${xSVG}</button>`;
+
+    item.addEventListener('click', e => {
+      if (e.target.closest('.nb-del')) return;
+      vbActiveId = b.id; renderVbSidebar(); renderVbCanvas();
+    });
+
+    item.querySelector('.vb-sidebar-item-name').addEventListener('dblclick', () => {
+      const nameEl = item.querySelector('.vb-sidebar-item-name');
+      const inp = document.createElement('input');
+      inp.className = 'nb-item-name-input'; inp.value = b.name;
+      nameEl.replaceWith(inp); inp.focus(); inp.select();
+      const save = () => { b.name = inp.value.trim() || b.name; saveVb(); renderVbSidebar(); };
+      inp.addEventListener('blur', save, {once:true});
+      inp.addEventListener('keydown', ke => {
+        if (ke.key==='Enter') { ke.preventDefault(); inp.blur(); }
+        if (ke.key==='Escape') { inp.value=b.name; inp.blur(); }
+      });
+    });
+
+    item.querySelector('.nb-del').addEventListener('click', e => {
+      e.stopPropagation();
+      if (!confirm(`Delete "${b.name}"?`)) return;
+      vbBoards = vbBoards.filter(x=>x.id!==b.id);
+      if (vbActiveId===b.id) vbActiveId = vbBoards[0]?.id || null;
+      saveVb(); renderVbSidebar(); renderVbCanvas();
+    });
+    list.appendChild(item);
+  });
+}
+
+function renderVbCanvas() {
+  const area = document.getElementById('vbCanvasArea');
+  if (!area) return;
+  area.innerHTML = '';
+
+  const board = vbGetActive();
+  if (!board) {
+    const emp = document.createElement('div');
+    emp.className = 'vb-canvas-empty';
+    emp.innerHTML = `<svg width="32" height="32" viewBox="0 0 24 24" fill="none" opacity=".18"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5"/><line x1="12" y1="8" x2="12" y2="16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="8" y1="12" x2="16" y2="12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><span>No board selected</span>`;
+    area.appendChild(emp); return;
+  }
+
+  const pan = document.createElement('div');
+  pan.id = 'vbPan';
+  pan.style.cssText = `position:absolute;left:50%;top:50%;width:0;height:0;will-change:transform;transform:translate(${board.panX||0}px,${board.panY||0}px);`;
+  area.appendChild(pan);
+
+  const svgNS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(svgNS, 'svg');
+  svg.id = 'vbSvg';
+  svg.style.cssText = 'position:absolute;left:0;top:0;width:0;height:0;overflow:visible;pointer-events:none;';
+  pan.appendChild(svg);
+
+  // Vision node
+  pan.appendChild(buildVbVisionNode(board));
+
+  // Bubbles
+  board.bubbles.forEach(bubble => {
+    vbDrawLine(svg, bubble);
+    pan.appendChild(buildVbBubble(board, bubble));
+  });
+
+  // Canvas panning
+  area.addEventListener('mousedown', e => {
+    if (e.button !== 0) return;
+    if (e.target.closest('.vb-bubble') || e.target.closest('.vb-vision-node')) return;
+    vbPanningState = { board, startX:e.clientX, startY:e.clientY, startPanX:board.panX||0, startPanY:board.panY||0 };
+    area.classList.add('panning');
+    e.preventDefault();
+  });
+}
+
+function vbDrawLine(svg, bubble) {
+  const svgNS = 'http://www.w3.org/2000/svg';
+  const line = document.createElementNS(svgNS, 'line');
+  line.id = `vbLine_${bubble.id}`;
+  line.setAttribute('x1', 0); line.setAttribute('y1', 0);
+  line.setAttribute('x2', bubble.x + Math.floor((bubble.w||180)/2));
+  line.setAttribute('y2', bubble.y + Math.floor((bubble.h||100)/2));
+  line.setAttribute('stroke', 'rgba(255,255,255,0.13)');
+  line.setAttribute('stroke-width', '1.5');
+  line.setAttribute('stroke-dasharray', '5,4');
+  line.setAttribute('stroke-linecap', 'round');
+  svg.appendChild(line);
+}
+
+function buildVbVisionNode(board) {
+  const vn = document.createElement('div');
+  vn.className = 'vb-vision-node';
+
+  if (board.vision.img) {
+    const img = document.createElement('img');
+    img.className = 'vb-vision-img'; img.src = board.vision.img;
+    img.addEventListener('click', e => { e.stopPropagation(); vbPickImage(board); });
+    vn.appendChild(img);
+  } else {
+    const ph = document.createElement('div');
+    ph.className = 'vb-vision-img-placeholder';
+    ph.innerHTML = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="3" stroke="currentColor" stroke-width="1.5"/><line x1="12" y1="8" x2="12" y2="16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="8" y1="12" x2="16" y2="12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><span>Add image</span>`;
+    ph.addEventListener('click', e => { e.stopPropagation(); vbPickImage(board); });
+    vn.appendChild(ph);
+  }
+
+  const titleInp = document.createElement('input');
+  titleInp.className = 'vb-vision-title-inp';
+  titleInp.value = board.vision.title || '';
+  titleInp.placeholder = 'Your vision…';
+  titleInp.addEventListener('mousedown', e => e.stopPropagation());
+  titleInp.addEventListener('change', e => { board.vision.title = e.target.value; saveVb(); });
+  vn.appendChild(titleInp);
+
+  const addBtn = document.createElement('button');
+  addBtn.className = 'vb-add-bubble-btn';
+  addBtn.textContent = '+ Add thought';
+  addBtn.addEventListener('mousedown', e => e.stopPropagation());
+  addBtn.addEventListener('click', e => { e.stopPropagation(); vbAddBubble(board); });
+  vn.appendChild(addBtn);
+
+  return vn;
+}
+
+function vbPickImage(board) {
+  const inp = document.getElementById('vbImageInput');
+  if (!inp) return;
+  inp.onchange = e => {
+    const file = e.target.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX = 400;
+        const scale = Math.min(MAX/img.width, MAX/img.height, 1);
+        canvas.width  = Math.floor(img.width  * scale);
+        canvas.height = Math.floor(img.height * scale);
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        board.vision.img = canvas.toDataURL('image/jpeg', 0.72);
+        inp.value = '';
+        saveVb(); renderVbCanvas();
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  };
+  inp.click();
+}
+
+function vbAddBubble(board) {
+  const i = board.bubbles.length;
+  const angle = (i * 72) * Math.PI / 180;
+  const r = 230 + i * 15;
+  const bw = 180, bh = 100;
+  const bubble = {
+    id: uid(),
+    x: Math.round(Math.cos(angle)*r - bw/2),
+    y: Math.round(Math.sin(angle)*r - bh/2),
+    w: bw, h: bh,
+    content: ''
+  };
+  board.bubbles.push(bubble);
+  saveVb(); renderVbCanvas();
+}
+
+function buildVbBubble(board, bubble) {
+  const bel = document.createElement('div');
+  bel.className = 'vb-bubble';
+  bel.id = `vbBubble_${bubble.id}`;
+  bel.style.cssText = `left:${bubble.x}px;top:${bubble.y}px;width:${bubble.w||180}px;height:${bubble.h||100}px;`;
+
+  // Header (drag handle + mini toolbar)
+  const header = document.createElement('div');
+  header.className = 'vb-bubble-header';
+
+  const editor = document.createElement('div');
+  editor.className = 'vb-bubble-editor';
+  editor.contentEditable = 'true';
+  editor.setAttribute('data-placeholder', 'Write a thought…');
+  editor.spellcheck = false;
+  if (bubble.content) editor.innerHTML = bubble.content;
+
+  const BTOOLS = [
+    {cmd:'bold',icon:'<b>B</b>'},{cmd:'italic',icon:'<i>I</i>'},
+    {cmd:'underline',icon:'<u>U</u>'},{cmd:'strikeThrough',icon:'<s>S</s>'},
+  ];
+  BTOOLS.forEach(t => {
+    const btn = document.createElement('button');
+    btn.className = 'nb-tool-btn'; btn.innerHTML = t.icon;
+    btn.style.cssText = 'width:20px;height:18px;font-size:10px;';
+    btn.addEventListener('mousedown', e => { e.preventDefault(); document.execCommand(t.cmd,false,null); editor.focus(); });
+    header.appendChild(btn);
+  });
+
+  editor.addEventListener('input', () => { bubble.content = editor.innerHTML; saveVb(); });
+  editor.addEventListener('mousedown', e => e.stopPropagation());
+
+  // Delete btn
+  const del = document.createElement('button');
+  del.className = 'vb-bubble-del'; del.innerHTML = xSVG;
+  del.addEventListener('click', e => {
+    e.stopPropagation();
+    board.bubbles = board.bubbles.filter(b2=>b2.id!==bubble.id);
+    saveVb(); renderVbCanvas();
+  });
+
+  bel.appendChild(header);
+  bel.appendChild(editor);
+  bel.appendChild(del);
+
+  // Drag via header
+  header.addEventListener('mousedown', e => {
+    if (e.button !== 0) return;
+    vbDraggingBubble = { bubble, startX:e.clientX, startY:e.clientY, startBX:bubble.x, startBY:bubble.y, el:bel };
+    e.preventDefault(); e.stopPropagation();
+  });
+
+  // Track resize
+  const ro = new ResizeObserver(() => {
+    bubble.w = bel.offsetWidth; bubble.h = bel.offsetHeight; saveVb();
+    const line = document.getElementById(`vbLine_${bubble.id}`);
+    if (line) {
+      line.setAttribute('x2', bubble.x + Math.floor(bubble.w/2));
+      line.setAttribute('y2', bubble.y + Math.floor(bubble.h/2));
+    }
+  });
+  ro.observe(bel);
+
+  return bel;
+}
+
+document.getElementById('btnAddVbBoard')?.addEventListener('click', () => {
+  const board = { id:uid(), name:'New Board', panX:0, panY:0, vision:{title:'',img:''}, bubbles:[] };
+  vbBoards.push(board);
+  vbActiveId = board.id;
+  saveVb(); renderVbSidebar(); renderVbCanvas();
+});
+
+/* ─── VISUALIZER ─────────────────────────────────────────── */
+
+let vizCtx = null, vizRaf = null;
+let vizBPM = 120, vizEnergy = 0.5;
+let vizLastBeatTime = Date.now();
+
+function initVisualizer() {
+  const canvas = document.getElementById('spVizCanvas');
+  if (!canvas) return;
+  // Match CSS width
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width  = canvas.offsetWidth  * dpr;
+  canvas.height = canvas.offsetHeight * dpr;
+  vizCtx = canvas.getContext('2d');
+  vizCtx.scale(dpr, dpr);
+  vizLoop();
+}
+
+function vizLoop() {
+  vizRaf = requestAnimationFrame(vizLoop);
+  const canvas = document.getElementById('spVizCanvas');
+  if (!canvas || !vizCtx) return;
+  const W = canvas.offsetWidth, H = canvas.offsetHeight;
+  vizCtx.clearRect(0, 0, W, H);
+
+  const now = Date.now();
+  const t = now * 0.001;
+  const beatMs = 60000 / vizBPM;
+  const phase = ((now - vizLastBeatTime) % beatMs) / beatMs;
+  const beatPulse = spIsPlaying ? Math.pow(Math.max(0, 1 - phase * 2.5), 2) : 0;
+
+  const bars = 20;
+  const gap  = 1;
+  const barW = (W - gap*(bars-1)) / bars;
+
+  for (let i = 0; i < bars; i++) {
+    const center = (bars - 1) / 2;
+    const dist   = Math.abs(i - center) / center;   // 0=center, 1=edge
+    const wave   = Math.sin(t * 2.5 + i * 0.55) * 0.5 + 0.5;
+
+    let h;
+    if (spIsPlaying) {
+      h = H * (0.15 + vizEnergy * 0.45 + beatPulse * 0.35) * (1 - dist * 0.4) * (0.7 + wave * 0.3);
+    } else {
+      h = H * (0.08 + wave * 0.18) * (1 - dist * 0.35);
+    }
+    h = Math.max(2, h);
+
+    const x = i * (barW + gap);
+    const y = (H - h) / 2;
+    const alpha = spIsPlaying ? 0.35 + beatPulse * 0.5 + vizEnergy * 0.15 : 0.18;
+    vizCtx.fillStyle = `rgba(255,255,255,${alpha.toFixed(2)})`;
+    vizCtx.beginPath();
+    vizCtx.rect(x, y, Math.max(1, barW), h);
+    vizCtx.fill();
+  }
+}
+
+async function fetchAudioFeatures(trackId) {
+  if (!trackId) return;
+  try {
+    const res = await spFetch(`https://api.spotify.com/v1/audio-features/${trackId}`);
+    if (!res || res.status !== 200) return;
+    const data = await res.json();
+    vizBPM    = data.tempo    || 120;
+    vizEnergy = data.energy   || 0.5;
+    vizLastBeatTime = Date.now();
+  } catch(e) {}
+}
+
 /* ─── BOOT ───────────────────────────────────────────────── */
 
 loadSettings();
+loadTheme();
 loadNotebooks();
 loadYtHistory();
+loadVb();
 render();
 renderTimer();
 renderNotebooks();
 if (activeNotebookId) renderNbWorkspace();
 renderYtHistory();
+renderVbSidebar();
+renderVbCanvas();
 
-window.addEventListener('load', ()=>setTimeout(initGoogleAuth, 500));
+requestAnimationFrame(() => initVisualizer());
+window.addEventListener('load', () => setTimeout(initGoogleAuth, 500));
 handleSpotifyCallback();
 if (localStorage.getItem('sp_token')){ showSpotifyPlayer(); pollNowPlaying(); }
