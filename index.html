@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Command Center</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+<div class="app">
+
+  <!-- ── ORBIT ANIMATION OVERLAY ──────────────────────────── -->
+  <div class="space-overlay" id="spaceOverlay">
+    <div class="stars-field" id="starsField"></div>
+    <div class="anim-launch-card" id="animLaunchCard"></div>
+    <div class="anim-earth" id="animEarth">🌍</div>
+    <div class="anim-orbit-arm" id="animOrbitArm">
+      <div class="orbit-rocket-mini" id="animOrbitingRocket">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 50" width="80" height="25" overflow="visible" style="display:block">
+          <defs>
+            <radialGradient id="miniFlameGrad" cx="15%" cy="50%" r="85%">
+              <stop offset="0%"   stop-color="#ffffff" stop-opacity="0.95"/>
+              <stop offset="35%"  stop-color="#ffaa00" stop-opacity="0.85"/>
+              <stop offset="100%" stop-color="#ff3300" stop-opacity="0"/>
+            </radialGradient>
+            <filter id="miniBlur" x="-80%" y="-80%" width="260%" height="260%">
+              <feGaussianBlur stdDeviation="2.5"/>
+            </filter>
+          </defs>
+          <!-- Speed / motion-blur lines trailing behind engine (negative x = outside viewBox, rendered via overflow) -->
+          <line x1="4"  y1="15" x2="-80" y2="8"  stroke="rgba(255,255,255,0.40)" stroke-width="2"   stroke-linecap="round"/>
+          <line x1="4"  y1="25" x2="-98" y2="25" stroke="rgba(255,255,255,0.50)" stroke-width="1.5" stroke-linecap="round"/>
+          <line x1="4"  y1="35" x2="-80" y2="42" stroke="rgba(255,255,255,0.40)" stroke-width="2"   stroke-linecap="round"/>
+          <line x1="6"  y1="19" x2="-56" y2="15" stroke="rgba(255,255,255,0.22)" stroke-width="1"   stroke-linecap="round"/>
+          <line x1="6"  y1="31" x2="-56" y2="35" stroke="rgba(255,255,255,0.22)" stroke-width="1"   stroke-linecap="round"/>
+          <!-- Engine flame glow -->
+          <ellipse class="mini-flame-el" cx="6" cy="25" rx="26" ry="16" fill="url(#miniFlameGrad)" filter="url(#miniBlur)"/>
+          <!-- Top fin -->
+          <path d="M 26,17 L 14,2 L 46,17"   fill="#181818" stroke="#2e2e2e" stroke-width="1"/>
+          <!-- Bottom fin -->
+          <path d="M 26,33 L 14,48 L 46,33"  fill="#181818" stroke="#2e2e2e" stroke-width="1"/>
+          <!-- Engine bell -->
+          <path d="M 22,20 L 8,17 L 8,33 L 22,30 Z" fill="#1e1e1e" stroke="#2e2e2e" stroke-width="1"/>
+          <ellipse cx="8" cy="25" rx="6" ry="9" fill="#141414" stroke="#282828" stroke-width="1"/>
+          <!-- Body -->
+          <path d="M 22,18 L 110,18 Q 132,18 148,25 Q 132,32 110,32 L 22,32 Z" fill="#1c1c1c" stroke="#2c2c2c" stroke-width="1"/>
+          <!-- Sheen -->
+          <path d="M 26,19 Q 75,16 108,18 Q 124,19 138,23" stroke="rgba(255,255,255,0.05)" stroke-width="2" fill="none" stroke-linecap="round"/>
+          <!-- Panel lines -->
+          <rect x="52" y="18" width="2" height="14" fill="rgba(255,255,255,0.02)" rx="1"/>
+          <rect x="98" y="18" width="2" height="14" fill="rgba(255,255,255,0.02)" rx="1"/>
+          <!-- Porthole outer -->
+          <circle cx="70" cy="25" r="10" fill="#111" stroke="#363636" stroke-width="1.5"/>
+          <!-- Porthole inner -->
+          <circle cx="70" cy="25" r="7"  fill="#0d0d0d" stroke="#232323" stroke-width="1"/>
+          <!-- Porthole glare -->
+          <path d="M 65,21 Q 68,18 73,20" stroke="rgba(255,255,255,0.10)" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+        </svg>
+      </div>
+    </div>
+    <div class="anim-finale" id="animFinale">
+      <div class="anim-rocket-icon">🚀</div>
+      <div class="anim-finale-label">Now in orbit</div>
+    </div>
+  </div>
+
+  <!-- ── TIME PICKER MODAL ────────────────────────────────── -->
+  <div class="timepick-overlay" id="timepickOverlay" style="display:none">
+    <div class="timepick-card">
+      <div class="timepick-title">Set focus time</div>
+      <div class="timepick-grid">
+        <button class="tp-opt" data-mins="5">5 min</button>
+        <button class="tp-opt" data-mins="10">10 min</button>
+        <button class="tp-opt" data-mins="15">15 min</button>
+        <button class="tp-opt selected" data-mins="25">25 min</button>
+        <button class="tp-opt" data-mins="30">30 min</button>
+        <button class="tp-opt" data-mins="45">45 min</button>
+        <button class="tp-opt" data-mins="60">60 min</button>
+        <button class="tp-opt" data-mins="90">90 min</button>
+      </div>
+      <div class="tp-custom-row">
+        <input class="tp-custom-input" id="tpCustom" type="number" min="1" max="480" placeholder="custom"/>
+        <span class="tp-custom-label">min</span>
+      </div>
+      <div class="tp-actions">
+        <button class="tp-confirm" id="btnTpConfirm">Start</button>
+        <button class="tp-cancel"  id="btnTpCancel">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── LAUNCH MODAL ─────────────────────────────────────── -->
+  <div class="launch-modal-overlay" id="launchModalOverlay" style="display:none">
+    <div class="launch-modal-card">
+      <div class="launch-modal-rocket">🚀</div>
+      <h2 class="launch-modal-heading">Ready for launch?</h2>
+      <p class="launch-modal-task" id="launchModalTask"></p>
+      <div class="launch-modal-btns">
+        <button class="lm-btn-primary" id="btnLaunchConfirm">Launch into orbit</button>
+        <button class="lm-btn-secondary" id="btnLaunchRefuel">Add 5 more minutes</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SIDEBAR ───────────────────────────────────────────── -->
+  <nav class="sidebar">
+    <div class="sidebar-brand">⌘</div>
+    <ul class="nav-tabs">
+      <li class="nav-tab active" data-tab="focus" title="Focus">
+        <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+          <circle cx="10" cy="10" r="3" fill="currentColor"/>
+          <circle cx="10" cy="10" r="7" stroke="currentColor" stroke-width="1.5"/>
+          <line x1="10" y1="1" x2="10" y2="4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          <line x1="10" y1="15.5" x2="10" y2="19" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          <line x1="1" y1="10" x2="4.5" y2="10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          <line x1="15.5" y1="10" x2="19" y2="10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        <span>Focus</span>
+      </li>
+      <li class="nav-tab" data-tab="notes" title="Notes">
+        <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+          <rect x="3" y="2" width="14" height="16" rx="2" stroke="currentColor" stroke-width="1.5"/>
+          <line x1="6.5" y1="7" x2="13.5" y2="7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          <line x1="6.5" y1="10" x2="13.5" y2="10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          <line x1="6.5" y1="13" x2="10" y2="13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        <span>Notes</span>
+      </li>
+      <li class="nav-tab" data-tab="calendar" title="Calendar">
+        <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+          <rect x="2" y="3" width="16" height="15" rx="2" stroke="currentColor" stroke-width="1.5"/>
+          <line x1="2" y1="8" x2="18" y2="8" stroke="currentColor" stroke-width="1.5"/>
+          <line x1="6" y1="1" x2="6" y2="5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          <line x1="14" y1="1" x2="14" y2="5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        <span>Calendar</span>
+      </li>
+      <li class="nav-tab" data-tab="habits" title="Habits">
+        <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+          <path d="M10 2L12.35 7.36L18 8.18L14 12.08L14.9 18L10 15.27L5.1 18L6 12.08L2 8.18L7.65 7.36L10 2Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+        </svg>
+        <span>Habits</span>
+      </li>
+      <li class="nav-tab nav-tab-bottom" data-tab="settings" title="Settings">
+        <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+          <circle cx="10" cy="10" r="2.5" stroke="currentColor" stroke-width="1.5"/>
+          <path d="M10 1.5v2M10 16.5v2M1.5 10h2M16.5 10h2M3.64 3.64l1.42 1.42M14.94 14.94l1.42 1.42M3.64 16.36l1.42-1.42M14.94 5.06l1.42-1.42" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        <span>Settings</span>
+      </li>
+    </ul>
+  </nav>
+
+  <!-- ── MAIN ──────────────────────────────────────────────── -->
+  <main class="main">
+
+    <!-- FOCUS TAB -->
+    <div class="tab-panel active" id="tab-focus">
+      <div class="panel-header"><h1 class="panel-title">Focus Machine</h1></div>
+      <div class="focus-body">
+
+        <!-- Tasks Column -->
+        <div class="tasks-column">
+
+          <!-- TAKEOFF -->
+          <div class="takeoff-section">
+            <div class="section-label">Takeoff</div>
+            <div class="takeoff-zone" id="takeoffZone">
+
+              <!-- Empty state -->
+              <div class="zone-empty-state" id="takeoffEmpty">
+                <svg width="14" height="14" viewBox="0 0 20 20" fill="none" opacity=".25">
+                  <path d="M10 2v16M2 10h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+                Drag tasks here to launch
+              </div>
+
+              <!-- Rocket display -->
+              <div id="rocketDisplay" style="display:none">
+                <div class="rocket-wrapper" id="rocketWrapper" data-fire="0">
+                  <svg class="rocket-svg" viewBox="0 0 500 160" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                      <radialGradient id="fgOuter" cx="15%" cy="50%" r="85%">
+                        <stop offset="0%" stop-color="#ff5500" stop-opacity="0.85"/>
+                        <stop offset="100%" stop-color="#ff0000" stop-opacity="0"/>
+                      </radialGradient>
+                      <radialGradient id="fgMid" cx="15%" cy="50%" r="85%">
+                        <stop offset="0%" stop-color="#ffcc00" stop-opacity="0.9"/>
+                        <stop offset="55%" stop-color="#ff6600" stop-opacity="0.65"/>
+                        <stop offset="100%" stop-color="#ff2200" stop-opacity="0"/>
+                      </radialGradient>
+                      <radialGradient id="fgCore" cx="15%" cy="50%" r="85%">
+                        <stop offset="0%" stop-color="#ffffff" stop-opacity="0.95"/>
+                        <stop offset="25%" stop-color="#fffaaa" stop-opacity="0.9"/>
+                        <stop offset="60%" stop-color="#ffaa00" stop-opacity="0.7"/>
+                        <stop offset="100%" stop-color="#ff4400" stop-opacity="0"/>
+                      </radialGradient>
+                      <filter id="fBlur" x="-60%" y="-60%" width="220%" height="220%">
+                        <feGaussianBlur stdDeviation="3"/>
+                      </filter>
+                    </defs>
+
+                    <!-- FIRE GROUPS -->
+                    <g class="flame-group fg1">
+                      <ellipse cx="30" cy="80" rx="22" ry="15" fill="url(#fgMid)" filter="url(#fBlur)"/>
+                    </g>
+                    <g class="flame-group fg2">
+                      <ellipse cx="18" cy="80" rx="36" ry="24" fill="url(#fgOuter)" filter="url(#fBlur)"/>
+                      <ellipse cx="28" cy="80" rx="20" ry="13" fill="url(#fgMid)" filter="url(#fBlur)"/>
+                    </g>
+                    <g class="flame-group fg3">
+                      <ellipse cx="8" cy="80" rx="50" ry="32" fill="url(#fgOuter)" filter="url(#fBlur)"/>
+                      <ellipse cx="18" cy="80" rx="30" ry="20" fill="url(#fgMid)" filter="url(#fBlur)"/>
+                      <ellipse cx="28" cy="80" rx="16" ry="11" fill="url(#fgCore)" filter="url(#fBlur)"/>
+                    </g>
+                    <g class="flame-group fg4">
+                      <ellipse cx="-5" cy="80" rx="65" ry="44" fill="url(#fgOuter)" filter="url(#fBlur)"/>
+                      <ellipse cx="8" cy="74" rx="42" ry="28" fill="url(#fgMid)" filter="url(#fBlur)"/>
+                      <ellipse cx="8" cy="86" rx="38" ry="26" fill="url(#fgMid)" filter="url(#fBlur)"/>
+                      <ellipse cx="22" cy="80" rx="22" ry="14" fill="url(#fgCore)" filter="url(#fBlur)"/>
+                      <ellipse cx="-8" cy="60" rx="16" ry="28" fill="url(#fgOuter)" filter="url(#fBlur)" transform="rotate(-22 -8 60)"/>
+                      <ellipse cx="-8" cy="100" rx="16" ry="28" fill="url(#fgOuter)" filter="url(#fBlur)" transform="rotate(22 -8 100)"/>
+                    </g>
+
+                    <!-- NOZZLE GLOW (level 1+) -->
+                    <ellipse class="nozzle-glow" cx="42" cy="80" rx="10" ry="18" fill="#ff5500" opacity="0"/>
+
+                    <!-- TOP FIN -->
+                    <path d="M 82,52 L 54,16 L 112,52" fill="#181818" stroke="#2e2e2e" stroke-width="1.5" stroke-linejoin="round"/>
+                    <!-- BOTTOM FIN -->
+                    <path d="M 82,108 L 54,144 L 112,108" fill="#181818" stroke="#2e2e2e" stroke-width="1.5" stroke-linejoin="round"/>
+
+                    <!-- ENGINE BELL -->
+                    <path d="M 60,62 L 38,52 L 38,108 L 60,100 Z" fill="#1e1e1e" stroke="#2e2e2e" stroke-width="1.5"/>
+                    <ellipse cx="38" cy="80" rx="13" ry="22" fill="#141414" stroke="#282828" stroke-width="1.5"/>
+
+                    <!-- BODY -->
+                    <path d="M 60,50 L 376,50 Q 428,50 460,80 Q 428,110 376,110 L 60,110 Q 57,105 57,80 Q 57,55 60,50 Z"
+                          fill="#1c1c1c" stroke="#2c2c2c" stroke-width="1.5"/>
+
+                    <!-- SHEEN -->
+                    <path d="M 65,54 Q 220,47 372,53 Q 412,55 444,70"
+                          stroke="rgba(255,255,255,0.04)" stroke-width="5" fill="none" stroke-linecap="round"/>
+
+                    <!-- PANEL LINES -->
+                    <rect x="132" y="50" width="5" height="60" fill="rgba(255,255,255,0.02)" rx="1"/>
+                    <rect x="315" y="50" width="5" height="60" fill="rgba(255,255,255,0.02)" rx="1"/>
+
+                    <!-- PORTHOLE OUTER -->
+                    <circle cx="240" cy="80" r="30" fill="#111" stroke="#363636" stroke-width="2"/>
+                    <!-- PORTHOLE INNER -->
+                    <circle cx="240" cy="80" r="26" fill="#0d0d0d" stroke="#232323" stroke-width="1.5"/>
+                    <!-- GLARE -->
+                    <path d="M 226,70 Q 234,63 245,67" stroke="rgba(255,255,255,0.08)" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+
+                    <!-- RIVETS -->
+                    <circle cx="122" cy="62" r="2.5" fill="#222" stroke="#2e2e2e" stroke-width="0.5"/>
+                    <circle cx="122" cy="98" r="2.5" fill="#222" stroke="#2e2e2e" stroke-width="0.5"/>
+                    <circle cx="172" cy="57" r="2" fill="#1e1e1e"/>
+                    <circle cx="172" cy="103" r="2" fill="#1e1e1e"/>
+                    <circle cx="328" cy="57" r="2" fill="#1e1e1e"/>
+                    <circle cx="328" cy="103" r="2" fill="#1e1e1e"/>
+
+                    <!-- DASH LINES -->
+                    <line x1="132" y1="80" x2="208" y2="80" stroke="#1e1e1e" stroke-width="1.5" stroke-dasharray="5,4"/>
+                    <line x1="272" y1="80" x2="325" y2="80" stroke="#1e1e1e" stroke-width="1.5" stroke-dasharray="5,4"/>
+
+                    <!-- PORTHOLE TEXT via foreignObject -->
+                    <foreignObject x="214" y="54" width="52" height="52">
+                      <div xmlns="http://www.w3.org/1999/xhtml"
+                           style="width:52px;height:52px;display:flex;flex-direction:column;align-items:center;justify-content:space-evenly;padding:6px 3px;box-sizing:border-box;overflow:hidden;">
+                        <span id="portholeTitle"
+                              style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:6px;font-weight:600;color:#e0e0e0;text-align:center;line-height:1.3;word-break:break-word;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;max-width:48px;"></span>
+                        <span id="portholeTimerEl"
+                              style="font-family:'SF Mono','Consolas',monospace;font-size:8.5px;font-weight:300;color:#e0e0e0;white-space:nowrap;transition:color 0.5s;letter-spacing:0.02em;"></span>
+                      </div>
+                    </foreignObject>
+                  </svg>
+                </div>
+
+                <!-- Fuel button + progress bar -->
+                <div class="rocket-controls">
+                  <div class="rocket-progress-wrap">
+                    <div class="rocket-progress-bar" id="rocketProgressBar">
+                      <div class="rocket-progress-fill" id="rocketProgressFill"></div>
+                    </div>
+                  </div>
+                  <button class="fuel-btn" id="fuelBtn">
+                    <span class="fuel-icon">⛽</span>
+                    <span>+5 min</span>
+                  </button>
+                </div>
+
+                <!-- Secondary tasks (overflow) -->
+                <div class="takeoff-secondary" id="takeoffSecondary"></div>
+              </div>
+
+            </div><!-- /takeoff-zone -->
+          </div>
+
+          <!-- LAUNCHPAD -->
+          <div class="launchpad-section">
+            <div class="launchpad-header">
+              <div class="section-label">Launchpad</div>
+              <button class="btn-add" id="btnAddTask">+ Add task</button>
+            </div>
+            <div class="task-list" id="taskList"></div>
+          </div>
+
+          <!-- ORBIT -->
+          <div class="orbit-section">
+            <div class="section-label">Orbit</div>
+            <div class="orbit-drop-zone" id="orbitDropZone">
+              <div class="orbit-empty" id="orbitEmpty">
+                <span style="opacity:.25">🌍</span> Drag from Takeoff to orbit
+              </div>
+              <div class="orbit-list" id="orbitList"></div>
+            </div>
+          </div>
+
+        </div><!-- /tasks-column -->
+
+        <!-- POMODORO + MEDIA COLUMN -->
+        <div class="pomodoro-column">
+          <div class="section-label">Timer</div>
+
+          <div class="pomo-modes">
+            <button class="pomo-mode active" data-mode="work">Work</button>
+            <button class="pomo-mode" data-mode="short">Short Break</button>
+            <button class="pomo-mode" data-mode="long">Long Break</button>
+          </div>
+
+          <div class="hourglass-wrap" id="hourglassWrap">
+            <svg class="hourglass-svg" viewBox="0 0 100 172" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <clipPath id="hgTopClip">
+                  <polygon points="10,8 90,8 55,78 45,78"/>
+                </clipPath>
+                <clipPath id="hgBotClip">
+                  <polygon points="45,92 55,92 90,162 10,162"/>
+                </clipPath>
+              </defs>
+              <!-- top chamber frame -->
+              <polygon points="10,8 90,8 55,78 45,78"
+                       fill="#161616" stroke="#2e2e2e" stroke-width="1.5" stroke-linejoin="round"/>
+              <!-- bottom chamber frame -->
+              <polygon points="45,92 55,92 90,162 10,162"
+                       fill="#161616" stroke="#2e2e2e" stroke-width="1.5" stroke-linejoin="round"/>
+              <!-- neck sides -->
+              <line x1="45" y1="78" x2="45" y2="92" stroke="#2e2e2e" stroke-width="1.5"/>
+              <line x1="55" y1="78" x2="55" y2="92" stroke="#2e2e2e" stroke-width="1.5"/>
+              <!-- top cap bar -->
+              <rect x="6" y="3" width="88" height="7" rx="3.5" fill="#252525" stroke="#383838" stroke-width="0.5"/>
+              <!-- bottom cap bar -->
+              <rect x="6" y="162" width="88" height="7" rx="3.5" fill="#252525" stroke="#383838" stroke-width="0.5"/>
+              <!-- top sand (fills top-down, drains from waist end) -->
+              <rect id="hgTopSand" x="0" y="8" width="100" height="70"
+                    clip-path="url(#hgTopClip)" fill="#f0f0f0" opacity="0.88"/>
+              <!-- bottom sand (accumulates from bottom up) -->
+              <rect id="hgBotSand" x="0" y="162" width="100" height="0"
+                    clip-path="url(#hgBotClip)" fill="#f0f0f0" opacity="0.88"/>
+              <!-- falling sand particles (in neck, animated when running) -->
+              <circle class="hg-particle"     cx="50" cy="80" r="1.5" fill="rgba(255,255,255,0.9)"/>
+              <circle class="hg-particle hg-p2" cx="50" cy="80" r="1.5" fill="rgba(255,255,255,0.7)"/>
+              <circle class="hg-particle hg-p3" cx="50" cy="80" r="1.5" fill="rgba(255,255,255,0.5)"/>
+            </svg>
+            <div class="hourglass-time" id="timerDisplay">25:00</div>
+          </div>
+
+          <div class="pomo-controls">
+            <button class="pomo-btn-primary" id="btnStartPause">Start</button>
+            <button class="pomo-btn-secondary" id="btnReset">Reset</button>
+          </div>
+
+          <div class="pomo-sessions-wrap">
+            <div class="section-label">Sessions completed</div>
+            <div class="session-dots" id="sessionDots">
+              <div class="s-dot"></div><div class="s-dot"></div>
+              <div class="s-dot"></div><div class="s-dot"></div>
+            </div>
+          </div>
+
+          <div class="pomo-focus-task" id="pomodoroFocusTask" style="display:none">
+            <div class="section-label">Focusing on</div>
+            <div class="pomo-focus-name" id="pomodoroFocusName">—</div>
+          </div>
+
+          <!-- MEDIA -->
+          <div class="col-divider"></div>
+
+          <div class="media-tabs">
+            <button class="media-tab active" data-media="spotify">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/>
+              </svg>
+              Spotify
+            </button>
+            <button class="media-tab" data-media="youtube">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+              </svg>
+              YouTube
+            </button>
+          </div>
+
+          <!-- Spotify Panel -->
+          <div class="media-panel" id="mediaPanelSpotify">
+            <div id="spotifyConnect">
+              <button class="spotify-connect-btn" id="btnSpotifyConnect">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="#1DB954">
+                  <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/>
+                </svg>
+                Connect Spotify
+              </button>
+            </div>
+            <div class="spotify-player" id="spotifyPlayer" style="display:none">
+              <div class="spotify-now-playing">
+                <img class="spotify-art" id="spotifyArt" src="" alt=""/>
+                <div class="spotify-meta">
+                  <div class="spotify-track-name" id="spotifyTrackName">Nothing playing</div>
+                  <div class="spotify-artist" id="spotifyArtist">—</div>
+                </div>
+              </div>
+              <div class="sp-progress-wrap">
+                <span class="sp-time" id="spCurrentTime">0:00</span>
+                <div class="sp-progress-track" id="spProgressTrack">
+                  <div class="sp-progress-fill" id="spProgressFill"></div>
+                </div>
+                <span class="sp-time" id="spTotalTime">0:00</span>
+              </div>
+              <div class="spotify-controls">
+                <button class="sp-ctrl" id="btnPrev" title="Previous">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg>
+                </button>
+                <button class="sp-ctrl sp-play" id="btnPlay" title="Play/Pause">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" id="playIcon"><path d="M8 5v14l11-7z"/></svg>
+                </button>
+                <button class="sp-ctrl" id="btnNext" title="Next">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+                </button>
+              </div>
+              <button class="spotify-disconnect-btn" id="btnSpotifyDisconnect">Disconnect</button>
+            </div>
+          </div>
+
+          <!-- YouTube Panel -->
+          <div class="media-panel" id="mediaPanelYoutube">
+            <div class="yt-input-row">
+              <input id="ytInput" class="yt-input" type="text" placeholder="Paste YouTube URL or video ID…" spellcheck="false"/>
+              <button id="btnYtLoad" class="yt-load-btn">
+                <svg width="10" height="11" viewBox="0 0 10 12" fill="currentColor"><path d="M0 0v12l10-6z"/></svg>
+              </button>
+              <button id="btnYtClear" class="yt-clear-btn" title="Clear">
+                <svg width="9" height="9" viewBox="0 0 12 12" fill="none"><line x1="2" y1="2" x2="10" y2="10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><line x1="10" y1="2" x2="2" y2="10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+              </button>
+            </div>
+            <div id="ytPlayer" class="yt-player"></div>
+            <div class="yt-recent" id="ytRecent" style="display:none">
+              <div class="yt-recent-label">Recent</div>
+              <div class="yt-recent-list" id="ytRecentList"></div>
+            </div>
+          </div>
+
+        </div><!-- /pomodoro-column -->
+
+      </div><!-- /focus-body -->
+    </div><!-- /tab-focus -->
+
+    <!-- NOTES -->
+    <div class="tab-panel" id="tab-notes">
+      <div class="notes-body">
+        <!-- ── Vertical notebook sidebar ── -->
+        <div class="nb-sidebar">
+          <div class="nb-sidebar-header">Notebooks</div>
+          <div class="nb-sidebar-list" id="nbSidebarList"></div>
+          <button class="nb-add-btn" id="btnAddNotebook">+ Notebook</button>
+        </div>
+        <!-- ── Main workspace ── -->
+        <div class="nb-main" id="nbMain">
+          <div class="nb-empty-state" id="nbEmptyState">
+            <span class="nb-empty-icon">📓</span>
+            <span>Select a notebook or create one</span>
+          </div>
+          <div class="nb-workspace" id="nbWorkspace" style="display:none">
+            <!-- Horizontal section tabs -->
+            <div class="nb-tabs-bar" id="nbTabsBar">
+              <div class="nb-tabs-scroll" id="nbTabsScroll"></div>
+              <button class="nb-add-tab-btn" id="btnAddNbTab">+ Section</button>
+            </div>
+            <!-- Content (tasks + notes stacked) -->
+            <div class="nb-content" id="nbContent"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CALENDAR -->
+    <div class="tab-panel" id="tab-calendar">
+      <div class="panel-header"><h1 class="panel-title">Calendar</h1></div>
+      <div class="calendar-body">
+        <div class="cal-connect-state" id="calConnectState">
+          <div class="cal-connect-card">
+            <div class="cal-icon">
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="none">
+                <rect x="2" y="3" width="20" height="19" rx="2" stroke="currentColor" stroke-width="1.5"/>
+                <line x1="2" y1="9" x2="22" y2="9" stroke="currentColor" stroke-width="1.5"/>
+                <line x1="7" y1="1" x2="7" y2="5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                <line x1="17" y1="1" x2="17" y2="5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <h2 class="cal-connect-title">Google Calendar</h2>
+            <p class="cal-connect-desc">Connect to see upcoming events and import them as tasks.</p>
+            <button class="cal-connect-btn" id="btnCalConnect">Connect with Google</button>
+            <div class="cal-config-hint" id="calConfigHint"></div>
+          </div>
+        </div>
+        <div class="cal-events-state" id="calEventsState" style="display:none">
+          <div class="cal-toolbar">
+            <span class="cal-toolbar-label">Upcoming — next 14 days</span>
+            <div class="cal-toolbar-actions">
+              <button class="cal-import-all-btn" id="btnCalImportAll">Import all as tasks</button>
+              <button class="cal-disconnect-btn" id="btnCalDisconnect">Disconnect</button>
+            </div>
+          </div>
+          <div class="cal-events-list" id="calEventsList"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- HABITS -->
+    <div class="tab-panel" id="tab-habits">
+      <div class="panel-header"><h1 class="panel-title">Habits</h1></div>
+      <div class="placeholder-state">Coming soon</div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div class="tab-panel" id="tab-settings">
+      <div class="panel-header"><h1 class="panel-title">Settings</h1></div>
+      <div class="settings-body">
+        <div class="settings-group">
+          <div class="settings-group-title">Integrations</div>
+          <div class="settings-field">
+            <label class="settings-label">Google Client ID</label>
+            <div class="settings-hint">Google Cloud Console → APIs &amp; Services → Credentials → OAuth 2.0 Client IDs</div>
+            <input class="settings-input" id="inputGoogleClientId" type="text" placeholder="xxx.apps.googleusercontent.com" autocomplete="off" spellcheck="false"/>
+          </div>
+          <div class="settings-field">
+            <label class="settings-label">Spotify Client ID</label>
+            <div class="settings-hint">Spotify Developer Dashboard → your app → Settings. Add <code id="redirectUriDisplay"></code> as a Redirect URI.</div>
+            <input class="settings-input" id="inputSpotifyClientId" type="text" placeholder="32-character hex string" autocomplete="off" spellcheck="false"/>
+          </div>
+          <button class="settings-save-btn" id="btnSaveSettings">Save settings</button>
+          <div class="settings-saved-msg" id="settingsSavedMsg" style="display:none">Saved ✓</div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+<script src="app.js"></script>
+</body>
+</html>
