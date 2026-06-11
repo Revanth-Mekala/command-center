@@ -2199,6 +2199,65 @@ document.getElementById('podDice')?.addEventListener('click', () => {
   setTimeout(() => { podRoll(); renderPodRoll(); }, 580);
 });
 
+/* ── skill tree ── */
+function renderPodTree() {
+  const view = document.getElementById('podTreeView');
+  const tier = podTier();
+  view.innerHTML = `
+    <div class="pod-tree-top">
+      <button class="pod-back-btn" id="podTreeBack">← Back to dice</button>
+      <div class="pod-tree-title">Skill Tree</div>
+      <span class="pod-pomo-count">${pod.completed || 0} / ${POD_BANK.length} shipped</span>
+    </div>`;
+
+  for (let t = 1; t <= 6; t++) {
+    const unlocked = t <= tier;
+    const tierEl = document.createElement('div');
+    tierEl.className = 'pod-tree-tier ' + (t === tier ? 'unlocked current' : unlocked ? 'unlocked' : 'locked');
+
+    const tierDone = POD_BANK.filter(p => p.tier === t && pod.projects[p.id]?.status === 'completed').length;
+    const need = t - tier;
+    const status = !unlocked
+      ? `🔒 ship ${need} more project${need > 1 ? 's' : ''} to unlock`
+      : t === tier ? `current tier · ${tierDone}/6 shipped` : `${tierDone}/6 shipped`;
+
+    tierEl.innerHTML = `
+      <div class="pod-tree-tier-head">
+        <span class="pod-tree-tier-name">Tier ${t} — ${esc(POD_TIER_NAMES[t])}</span>
+        <span class="pod-tree-tier-status">${status}</span>
+      </div>
+      <div class="pod-tree-nodes"></div>`;
+
+    const nodesEl = tierEl.querySelector('.pod-tree-nodes');
+    POD_BANK.filter(p => p.tier === t).forEach(p => {
+      const st = pod.projects[p.id];
+      const node = document.createElement('div');
+      let cls = 'pod-tree-node', ico = '';
+      if (st?.status === 'completed') { cls += ' done'; ico = '✓'; }
+      else if (st?.status === 'in-progress') { cls += ' active'; ico = '●'; }
+      else if (!unlocked) { cls += ' locked'; ico = '🔒'; }
+      node.className = cls;
+      node.innerHTML = `${ico ? `<span class="ptn-ico">${ico}</span>` : ''}<span>${esc(p.title)}</span>`;
+      node.title = unlocked ? p.blurb : `Reach Tier ${t} to unlock`;
+      if (unlocked) node.addEventListener('click', () => openPodDetail(p.id));
+      nodesEl.appendChild(node);
+    });
+    view.appendChild(tierEl);
+  }
+
+  document.getElementById('podTreeBack').addEventListener('click', () => {
+    view.style.display = 'none';
+    document.getElementById('podRollView').style.display = 'flex';
+    renderPodRoll();
+  });
+}
+
+document.getElementById('podTreeBtn')?.addEventListener('click', () => {
+  document.getElementById('podRollView').style.display = 'none';
+  document.getElementById('podTreeView').style.display = 'block';
+  renderPodTree();
+});
+
 /* ── detail view ── */
 let podDetailId = null;
 
@@ -2213,6 +2272,7 @@ function openPodDetail(id) {
   const st = podProj(id);
   if (st.status === 'not-started') { st.status = 'in-progress'; pod.activeId = id; savePod(); }
   document.getElementById('podRollView').style.display = 'none';
+  document.getElementById('podTreeView').style.display = 'none';
   const view = document.getElementById('podDetailView');
   view.style.display = 'block';
   view.innerHTML = `

@@ -3374,3 +3374,94 @@ body {
   font-family: var(--mono);
   color: var(--text2);
 }
+
+/* Skill tree */
+.pod-tree-view { max-width: 900px; margin: 0 auto; }
+
+.pod-tree-top { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+.pod-tree-title { font-size: 16px; font-weight: 800; flex: 1; }
+
+.pod-tree-tier {
+  position: relative;
+  padding: 0 0 26px 34px;
+}
+/* spine */
+.pod-tree-tier::before {
+  content: '';
+  position: absolute;
+  left: 10px;
+  top: 18px;
+  bottom: -4px;
+  width: 2px;
+  background: var(--border2);
+}
+.pod-tree-tier:last-child::before { display: none; }
+/* tier dot */
+.pod-tree-tier::after {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 4px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--surface2);
+  border: 2px solid var(--border2);
+}
+.pod-tree-tier.unlocked::after { background: #fff; border-color: #fff; }
+.pod-tree-tier.current::after {
+  background: #fff;
+  border-color: #fff;
+  box-shadow: 0 0 0 4px rgba(255,255,255,0.15);
+}
+
+.pod-tree-tier-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.pod-tree-tier-name {
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.pod-tree-tier.locked .pod-tree-tier-name { color: var(--text3); }
+.pod-tree-tier-status { font-size: 11px; font-family: var(--mono); color: var(--text2); }
+.pod-tree-tier.locked .pod-tree-tier-status { color: var(--text3); }
+
+.pod-tree-nodes { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.pod-tree-node {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 13px;
+  border-radius: 20px;
+  background: var(--card);
+  border: 1px solid var(--border2);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+  transition: transform 0.12s, border-color 0.12s, box-shadow 0.12s;
+}
+.pod-tree-node:hover { transform: translateY(-2px); border-color: rgba(255,255,255,0.4); }
+.pod-tree-node .ptn-ico { font-size: 11px; opacity: 0.9; }
+
+.pod-tree-node.done {
+  border-color: rgba(255,255,255,0.5);
+  background: linear-gradient(160deg, #2a2a2a, var(--card));
+}
+.pod-tree-node.active {
+  border-color: #fff;
+  box-shadow: 0 0 12px rgba(255,255,255,0.18);
+}
+.pod-tree-node.locked {
+  color: var(--text3);
+  background: var(--surface);
+  border-color: var(--border);
+  cursor: not-allowed;
+}
+.pod-tree-node.locked:hover { transform: none; border-color: var(--border); }
