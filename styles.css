@@ -3465,3 +3465,65 @@ body {
   cursor: not-allowed;
 }
 .pod-tree-node.locked:hover { transform: none; border-color: var(--border); }
+
+/* Focus chip in pomodoro column */
+.pomo-focus-chip {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: var(--card);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  padding: 6px 10px;
+  margin-bottom: 10px;
+  font-size: 12px;
+}
+.pomo-focus-chip .pfc-title {
+  flex: 1;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+.pomo-focus-chip .pfc-title:hover { text-decoration: underline; }
+.pomo-focus-chip .pfc-meta { font-family: var(--mono); font-size: 11px; color: var(--text2); flex-shrink: 0; }
+.pomo-focus-chip .pfc-x { background: none; border: none; color: var(--text3); cursor: pointer; padding: 2px; font-size: 11px; }
+.pomo-focus-chip .pfc-x:hover { color: var(--text); }
+
+/* Recommended videos bar */
+.pod-yt-recs { display: flex; gap: 9px; overflow-x: auto; padding-bottom: 4px; }
+.pod-yt-recs::-webkit-scrollbar { height: 5px; }
+
+.pod-yt-rec { width: 148px; flex-shrink: 0; cursor: pointer; }
+.pod-yt-rec:hover .pyr-title { color: #fff; }
+.pod-yt-rec:hover .pyr-thumb { opacity: 0.85; }
+
+.pyr-thumb-wrap { position: relative; border-radius: 8px; overflow: hidden; background: var(--surface); }
+.pyr-thumb { width: 148px; height: 83px; object-fit: cover; display: block; transition: opacity 0.12s; }
+.pyr-dur {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  background: rgba(0,0,0,0.85);
+  color: #fff;
+  font-size: 10px;
+  font-family: var(--mono);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+.pyr-title {
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--text);
+  margin-top: 5px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.pyr-meta { font-size: 10px; color: var(--text3); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.pod-recs-msg { font-size: 11px; color: var(--text3); padding: 8px 2px; }
+
+.pod-yt-pill.active { color: #fff; border-color: rgba(255,255,255,0.45); background: var(--card-hi); }

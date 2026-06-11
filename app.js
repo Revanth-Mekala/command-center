@@ -1072,6 +1072,7 @@ function renderTimer() {
 }
 
 function startTimer() {
+  clearInterval(pomo.interval);   // never stack two tickers
   pomo.running = true;
   pomo.deadline = Date.now() + pomo.timeLeft * 1000;
   pomo.interval = setInterval(() => {
@@ -2300,7 +2301,8 @@ function openPodDetail(id) {
       </div>
       <div class="pod-panel">
         <div class="pod-panel-title">Video Tutorials</div>
-        <div class="pod-yt-player" id="podYtPlayer"><div class="pod-yt-empty"><span>▶</span><span>Search a topic below, then paste any YouTube link to play it here</span></div></div>
+        <div class="pod-yt-player" id="podYtPlayer"><div class="pod-yt-empty"><span>▶</span><span>Pick a video from the bar below — it plays right here</span></div></div>
+        <div class="pod-yt-recs" id="podYtRecs"></div>
         <div class="pod-yt-pills">${p.yt.map(q => `<button class="pod-yt-pill" data-q="${esc(q)}">🔎 ${esc(q)}</button>`).join('')}</div>
         <div class="pod-yt-row">
           <input class="pod-yt-input" id="podYtInput" placeholder="Paste a YouTube link to play it here…"/>
@@ -2346,8 +2348,14 @@ function openPodDetail(id) {
     savePod();
   });
   document.getElementById('podFocusBtn').addEventListener('click', () => podFocus(id));
-  view.querySelectorAll('.pod-yt-pill').forEach(b => b.addEventListener('click', () =>
-    window.open('https://www.youtube.com/results?search_query=' + encodeURIComponent(b.dataset.q), '_blank', 'noopener')));
+  view.querySelectorAll('.pod-yt-pill').forEach(b => b.addEventListener('click', () => {
+    view.querySelectorAll('.pod-yt-pill').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    podLoadRecs(b.dataset.q);
+  }));
+  // auto-load recommendations for the first topic
+  const firstPill = view.querySelector('.pod-yt-pill');
+  if (firstPill) { firstPill.classList.add('active'); podLoadRecs(firstPill.dataset.q); }
   const ytPlay = () => podPlayYt(document.getElementById('podYtInput').value);
   document.getElementById('podYtPlay').addEventListener('click', ytPlay);
   document.getElementById('podYtInput').addEventListener('keydown', e => { if (e.key === 'Enter') ytPlay(); });
@@ -2394,6 +2402,29 @@ function renderPodMilestones(p, st) {
   });
   const doneCount = p.milestones.filter((_, i) => st.done[i]).length;
   document.getElementById('podMsFill').style.width = (doneCount / p.milestones.length * 100) + '%';
+}
+
+async function podLoadRecs(query) {
+  const recs = document.getElementById('podYtRecs');
+  if (!recs) return;
+  recs.innerHTML = '<div class="pod-recs-msg">searching videos…</div>';
+  try {
+    const r = await (await fetch('/api/yt/search?q=' + encodeURIComponent(query))).json();
+    if (!r.videos || !r.videos.length) { recs.innerHTML = '<div class="pod-recs-msg">no videos found — try another topic</div>'; return; }
+    recs.innerHTML = '';
+    r.videos.forEach(v => {
+      const card = document.createElement('div');
+      card.className = 'pod-yt-rec';
+      card.innerHTML = `
+        <div class="pyr-thumb-wrap"><img class="pyr-thumb" loading="lazy" src="https://i.ytimg.com/vi/${v.id}/mqdefault.jpg" alt=""/>${v.duration ? `<span class="pyr-dur">${esc(v.duration)}</span>` : ''}</div>
+        <div class="pyr-title">${esc(v.title)}</div>
+        <div class="pyr-meta">${esc(v.channel)}${v.views ? ' · ' + esc(v.views) : ''}</div>`;
+      card.addEventListener('click', () => podPlayYt(v.id));
+      recs.appendChild(card);
+    });
+  } catch (e) {
+    recs.innerHTML = '<div class="pod-recs-msg">couldn\'t load videos — make sure the app is running via node server.js</div>';
+  }
 }
 
 function podPlayYt(input) {
@@ -2467,9 +2498,25 @@ async function podRunCmd(id, cmd, busyMsg) {
 }
 
 /* ── pomodoro link ── */
+function renderPomoFocusChip() {
+  const chip = document.getElementById('pomoFocusChip');
+  if (!chip) return;
+  const p = pod.focusId ? podGet(pod.focusId) : null;
+  if (!p) { chip.style.display = 'none'; return; }
+  const st = pod.projects[p.id] || {};
+  chip.style.display = 'flex';
+  chip.innerHTML = `<span>🎯</span><span class="pfc-title">${esc(p.title)}</span><span class="pfc-meta">${st.pomos || 0} 🍅</span><button class="pfc-x" title="Stop focusing on this project">✕</button>`;
+  chip.querySelector('.pfc-title').addEventListener('click', () => {
+    document.querySelector('.nav-tab[data-tab="project"]')?.click();
+    openPodDetail(p.id);
+  });
+  chip.querySelector('.pfc-x').addEventListener('click', () => { pod.focusId = null; savePod(); renderPomoFocusChip(); });
+}
+
 function podFocus(id) {
   pod.focusId = id; savePod();
   document.querySelector('.nav-tab[data-tab="focus"]')?.click();
+  renderPomoFocusChip();
   setMode('work');
   startTimer();
 }
@@ -2478,6 +2525,7 @@ function podOnPomoComplete() {
   if (!pod.focusId || !pod.projects[pod.focusId]) return;
   pod.projects[pod.focusId].pomos = (pod.projects[pod.focusId].pomos || 0) + 1;
   savePod();
+  renderPomoFocusChip();
   const el = document.getElementById('podPomoCount');
   if (el && podDetailId === pod.focusId) el.textContent = pod.projects[pod.focusId].pomos;
 }
@@ -2497,6 +2545,7 @@ renderYtHistory();
 renderVbSidebar();
 renderVbCanvas();
 renderPodRoll();
+renderPomoFocusChip();
 
 requestAnimationFrame(() => initVisualizer());
 window.addEventListener('load', () => setTimeout(initGoogleAuth, 500));

@@ -105,6 +105,41 @@ const server = http.createServer(async (req, res) => {
       } catch (e) { return json(res, 500, { error: String(e.message || e) }); }
     }
 
+    // GET /api/yt/search?q=  — scrape YouTube search results (no API key needed)
+    if (url.pathname === '/api/yt/search' && req.method === 'GET') {
+      const q = String(url.searchParams.get('q') || '').slice(0, 100);
+      if (!q) return json(res, 400, { error: 'missing q' });
+      try {
+        const page = await (await fetch('https://www.youtube.com/results?search_query=' + encodeURIComponent(q), {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Cookie': 'CONSENT=YES+1',
+          },
+        })).text();
+        const m = page.match(/var ytInitialData = (\{.+?\});<\/script>/s);
+        if (!m) return json(res, 200, { videos: [] });
+        const data = JSON.parse(m[1]);
+        const videos = [];
+        (function walk(node) {
+          if (!node || typeof node !== 'object' || videos.length >= 12) return;
+          if (node.videoRenderer && node.videoRenderer.videoId) {
+            const v = node.videoRenderer;
+            videos.push({
+              id: v.videoId,
+              title: (v.title?.runs?.[0]?.text) || '',
+              channel: (v.ownerText?.runs?.[0]?.text) || '',
+              duration: v.lengthText?.simpleText || '',
+              views: v.shortViewCountText?.simpleText || '',
+            });
+            return;
+          }
+          for (const k in node) walk(node[k]);
+        })(data);
+        return json(res, 200, { videos });
+      } catch (e) { return json(res, 200, { videos: [], error: String(e.message || e) }); }
+    }
+
     return json(res, 404, { error: 'unknown api' });
   }
 
