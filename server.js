@@ -122,7 +122,7 @@ const server = http.createServer(async (req, res) => {
         const data = JSON.parse(m[1]);
         const videos = [];
         (function walk(node) {
-          if (!node || typeof node !== 'object' || videos.length >= 12) return;
+          if (!node || typeof node !== 'object' || videos.length >= 3) return;
           if (node.videoRenderer && node.videoRenderer.videoId) {
             const v = node.videoRenderer;
             videos.push({
