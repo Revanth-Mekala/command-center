@@ -126,7 +126,11 @@ const server = http.createServer(async (req, res) => {
       }
       res.writeHead(404); return res.end('not found');
     }
-    res.writeHead(200, { 'Content-Type': MIME[path.extname(filePath).toLowerCase()] || 'application/octet-stream' });
+    const ext = path.extname(filePath).toLowerCase();
+    const headers = { 'Content-Type': MIME[ext] || 'application/octet-stream' };
+    // App files change often — make browsers always revalidate so updates show up
+    if (ext === '.html' || ext === '.js' || ext === '.css') headers['Cache-Control'] = 'no-cache';
+    res.writeHead(200, headers);
     res.end(data);
   });
 });
