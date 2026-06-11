@@ -118,6 +118,17 @@
         </svg>
         <span>Focus</span>
       </li>
+      <li class="nav-tab" data-tab="project" title="Project of the Day">
+        <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+          <rect x="2.5" y="2.5" width="15" height="15" rx="3.5" stroke="currentColor" stroke-width="1.5"/>
+          <circle cx="6.8" cy="6.8" r="1.4" fill="currentColor"/>
+          <circle cx="13.2" cy="6.8" r="1.4" fill="currentColor"/>
+          <circle cx="10" cy="10" r="1.4" fill="currentColor"/>
+          <circle cx="6.8" cy="13.2" r="1.4" fill="currentColor"/>
+          <circle cx="13.2" cy="13.2" r="1.4" fill="currentColor"/>
+        </svg>
+        <span>Project</span>
+      </li>
       <li class="nav-tab" data-tab="notes" title="Vision Board">
         <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
           <circle cx="10" cy="10" r="3" stroke="currentColor" stroke-width="1.5"/>
@@ -519,6 +530,30 @@
     </div><!-- /tab-focus -->
 
     <!-- VISION BOARD (replaces Notes) -->
+    <!-- PROJECT OF THE DAY TAB -->
+    <div class="tab-panel" id="tab-project">
+      <div class="panel-header">
+        <h1 class="panel-title">Project of the Day</h1>
+        <div class="pod-header-meta" id="podHeaderMeta"></div>
+      </div>
+      <div class="pod-body">
+
+        <!-- ROLL VIEW -->
+        <div class="pod-roll-view" id="podRollView">
+          <div class="pod-day-label" id="podDayLabel"></div>
+          <button class="pod-dice" id="podDice" title="Roll for today's projects">
+            <span class="pod-dice-cube" id="podDiceCube">⚄</span>
+          </button>
+          <div class="pod-roll-hint" id="podRollHint">Roll for today's three Python projects</div>
+          <div class="pod-options" id="podOptions"></div>
+        </div>
+
+        <!-- DETAIL VIEW (built by JS) -->
+        <div class="pod-detail-view" id="podDetailView" style="display:none"></div>
+
+      </div>
+    </div>
+
     <div class="tab-panel" id="tab-notes">
       <div class="vb-body">
         <div class="vb-sidebar">

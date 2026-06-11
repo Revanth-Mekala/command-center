@@ -1079,7 +1079,7 @@ function startTimer() {
     renderTimer();
     if (pomo.timeLeft <= 0) {
       clearInterval(pomo.interval); pomo.running = false; pomo.deadline = null;
-      if (pomo.mode==='work') { pomo.sessions++; setMode(pomo.sessions%4===0?'long':'short'); }
+      if (pomo.mode==='work') { pomo.sessions++; podOnPomoComplete(); setMode(pomo.sessions%4===0?'long':'short'); }
       else setMode('work');
     }
   }, 500);
@@ -1907,7 +1907,7 @@ document.addEventListener('visibilitychange', () => {
     renderTimer();
     if (pomo.timeLeft <= 0) {
       clearInterval(pomo.interval); pomo.running = false; pomo.deadline = null;
-      if (pomo.mode==='work') { pomo.sessions++; setMode(pomo.sessions%4===0?'long':'short'); }
+      if (pomo.mode==='work') { pomo.sessions++; podOnPomoComplete(); setMode(pomo.sessions%4===0?'long':'short'); }
       else setMode('work');
     }
   }
@@ -1920,6 +1920,507 @@ document.addEventListener('visibilitychange', () => {
   });
   if (needsRender) renderTakeoff();
 });
+
+/* ─── PROJECT OF THE DAY ─────────────────────────────────── */
+
+const POD_TIER_NAMES = ['', 'Fundamentals', 'APIs & Data', 'Automation & Bots', 'Web Apps', 'Data & Visualization', 'AI & Advanced'];
+
+const POD_BANK = [
+  // ── Tier 1: Fundamentals ──
+  { id:'cli-todo', tier:1, title:'CLI To-Do Manager', blurb:'A command-line task manager with add/complete/delete, priorities, and due dates — saved to JSON so nothing is lost between runs.',
+    skills:['argparse','JSON','file I/O','datetime'],
+    milestones:['Set up argparse with add / list / done / delete commands','Store tasks in a JSON file with load/save helpers','Add priorities and due dates with sorting','Color-code overdue and high-priority tasks in output','Write a README with usage examples'],
+    resources:[{label:'argparse — official docs',url:'https://docs.python.org/3/library/argparse.html'},{label:'Working with JSON in Python (Real Python)',url:'https://realpython.com/python-json/'},{label:'Automate the Boring Stuff — Files',url:'https://automatetheboringstuff.com/2e/chapter9/'}],
+    yt:['python argparse tutorial','python json file tutorial','build a cli todo app python'] },
+  { id:'expense-tracker', tier:1, title:'Expense Tracker CLI', blurb:'Track spending from the terminal: log expenses by category, then generate monthly summaries and a simple text bar chart.',
+    skills:['CSV','datetime','dictionaries','formatting'],
+    milestones:['Log expenses (amount, category, note) to a CSV file','List expenses filtered by month or category','Compute monthly totals per category','Render a text-based bar chart of spending','Add a budget warning when a category exceeds its limit'],
+    resources:[{label:'csv module — official docs',url:'https://docs.python.org/3/library/csv.html'},{label:'Python datetime guide (Real Python)',url:'https://realpython.com/python-datetime/'},{label:'f-strings formatting',url:'https://realpython.com/python-f-strings/'}],
+    yt:['python expense tracker project','python csv tutorial'] },
+  { id:'password-vault', tier:1, title:'Password Generator & Strength Checker', blurb:'Generate cryptographically secure passwords and grade any password\'s strength with clear feedback on what to improve.',
+    skills:['secrets','regex','string ops','CLI UX'],
+    milestones:['Generate random passwords with the secrets module','Add options for length, symbols, and excluded characters','Write a strength checker using regex rules','Score passwords and explain each deduction','Add a passphrase mode using a word list'],
+    resources:[{label:'secrets module — official docs',url:'https://docs.python.org/3/library/secrets.html'},{label:'Regex in Python (Real Python)',url:'https://realpython.com/regex-python/'},{label:'re module docs',url:'https://docs.python.org/3/library/re.html'}],
+    yt:['python password generator project','python regex tutorial'] },
+  { id:'file-organizer', tier:1, title:'Automatic File Organizer', blurb:'Point it at a messy folder (like Downloads) and it sorts every file into tidy subfolders by type and date — with a dry-run mode.',
+    skills:['pathlib','shutil','os','error handling'],
+    milestones:['Scan a folder and group files by extension','Move files into category folders (Images, Docs, Code…)','Add a dry-run flag that previews changes','Handle name collisions safely','Add an undo log that can reverse the last run'],
+    resources:[{label:'pathlib — official docs',url:'https://docs.python.org/3/library/pathlib.html'},{label:'shutil — official docs',url:'https://docs.python.org/3/library/shutil.html'},{label:'Automate the Boring Stuff — Organizing Files',url:'https://automatetheboringstuff.com/2e/chapter10/'}],
+    yt:['python file organizer project','python pathlib tutorial'] },
+  { id:'quiz-game', tier:1, title:'Terminal Quiz Game', blurb:'A quiz engine that loads question banks from files, times answers, keeps high scores, and gets harder as you streak.',
+    skills:['OOP basics','random','JSON','game loop'],
+    milestones:['Design a Question class and load questions from JSON','Build the quiz loop with score tracking','Add a countdown timer per question','Persist high scores to a file','Add difficulty levels and a streak bonus'],
+    resources:[{label:'Classes — official tutorial',url:'https://docs.python.org/3/tutorial/classes.html'},{label:'OOP in Python (Real Python)',url:'https://realpython.com/python3-object-oriented-programming/'},{label:'random module docs',url:'https://docs.python.org/3/library/random.html'}],
+    yt:['python quiz game project','python oop tutorial'] },
+  { id:'unit-converter', tier:1, title:'Smart Unit Converter', blurb:'Convert anything — “5 mi to km”, “72f to c”, “2 cups to ml” — from one natural command, with a clean conversion engine behind it.',
+    skills:['parsing','dictionaries','functions','testing'],
+    milestones:['Build conversion tables for length, weight, temp, volume','Parse free-text input like "5 mi to km"','Route through a base-unit conversion engine','Handle bad input with helpful errors','Add unit tests with pytest'],
+    resources:[{label:'pytest — getting started',url:'https://docs.pytest.org/en/stable/getting-started.html'},{label:'String methods — official docs',url:'https://docs.python.org/3/library/stdtypes.html#string-methods'},{label:'Python dictionaries (Real Python)',url:'https://realpython.com/python-dicts/'}],
+    yt:['python unit converter project','pytest tutorial for beginners'] },
+
+  // ── Tier 2: APIs & Data ──
+  { id:'weather-cli', tier:2, title:'Weather Dashboard CLI', blurb:'Pull live weather for any city from a real API and render a slick terminal dashboard with a 5-day forecast.',
+    skills:['requests','REST APIs','API keys','env vars'],
+    milestones:['Sign up for the OpenWeatherMap free API','Fetch current weather with requests + API key in env var','Parse JSON into a clean display (temp, wind, humidity)','Add a 5-day forecast view','Cache responses for 10 minutes to avoid rate limits'],
+    resources:[{label:'requests — quickstart',url:'https://requests.readthedocs.io/en/latest/user/quickstart/'},{label:'OpenWeatherMap API',url:'https://openweathermap.org/api'},{label:'API basics (Real Python)',url:'https://realpython.com/api-integration-in-python/'}],
+    yt:['python weather app api project','python requests tutorial'] },
+  { id:'currency-converter', tier:2, title:'Live Currency Converter', blurb:'Convert between 150+ currencies using live exchange rates, with offline caching and historical rate lookups.',
+    skills:['requests','JSON','caching','decimal'],
+    milestones:['Fetch live rates from a free exchange-rate API','Convert between any two currencies accurately with decimal','Cache the latest rates locally for offline use','Add historical rate lookup by date','Format output with proper currency symbols'],
+    resources:[{label:'decimal — official docs',url:'https://docs.python.org/3/library/decimal.html'},{label:'requests docs',url:'https://requests.readthedocs.io/en/latest/'},{label:'Frankfurter free FX API',url:'https://www.frankfurter.app/docs/'}],
+    yt:['python currency converter api','python api project for beginners'] },
+  { id:'github-stats', tier:2, title:'GitHub Profile Analyzer', blurb:'Enter any GitHub username and get a breakdown of their repos, languages, stars, and commit activity — using the public GitHub API.',
+    skills:['REST APIs','pagination','data aggregation'],
+    milestones:['Fetch a user profile and repo list from the GitHub API','Handle pagination for users with many repos','Aggregate stars, forks, and top languages','Render a language-share text chart','Export the report to Markdown'],
+    resources:[{label:'GitHub REST API docs',url:'https://docs.github.com/en/rest'},{label:'requests docs',url:'https://requests.readthedocs.io/en/latest/'},{label:'collections.Counter',url:'https://docs.python.org/3/library/collections.html#collections.Counter'}],
+    yt:['github api python tutorial','python api data project'] },
+  { id:'news-digest', tier:2, title:'Daily News Digest', blurb:'Pull top headlines on your topics every morning and compile them into a clean digest — printed, saved, or emailed to yourself.',
+    skills:['APIs','smtplib','scheduling','HTML email'],
+    milestones:['Fetch headlines by topic from a news API','Filter and dedupe articles by keyword','Format a clean text + HTML digest','Send it to yourself with smtplib','Schedule it to run daily'],
+    resources:[{label:'smtplib — official docs',url:'https://docs.python.org/3/library/smtplib.html'},{label:'Sending emails with Python (Real Python)',url:'https://realpython.com/python-send-email/'},{label:'NewsAPI',url:'https://newsapi.org/docs'}],
+    yt:['python email automation tutorial','python news api project'] },
+  { id:'crypto-tracker', tier:2, title:'Crypto Price Tracker with Alerts', blurb:'Watch live crypto prices, set target alerts, and get desktop notifications the moment a coin crosses your threshold.',
+    skills:['APIs','polling loops','notifications','threading'],
+    milestones:['Fetch live prices from the CoinGecko free API','Track a watchlist with configurable alert thresholds','Poll on an interval without blocking input','Fire desktop notifications on alert','Log price history to CSV for later charting'],
+    resources:[{label:'CoinGecko API docs',url:'https://www.coingecko.com/en/api/documentation'},{label:'threading — official docs',url:'https://docs.python.org/3/library/threading.html'},{label:'plyer notifications',url:'https://plyer.readthedocs.io/en/latest/'}],
+    yt:['python crypto price tracker','python threading tutorial'] },
+  { id:'wiki-scraper', tier:2, title:'Wikipedia Research Assistant', blurb:'Give it a topic and it scrapes Wikipedia for the summary, key facts, and related pages — then builds a study sheet.',
+    skills:['BeautifulSoup','HTML parsing','HTTP'],
+    milestones:['Fetch a Wikipedia page with requests','Parse the intro, infobox, and headings with BeautifulSoup','Extract related links for further reading','Generate a Markdown study sheet','Add a search mode using the Wikipedia API'],
+    resources:[{label:'Beautiful Soup docs',url:'https://www.crummy.com/software/BeautifulSoup/bs4/doc/'},{label:'Web scraping guide (Real Python)',url:'https://realpython.com/beautiful-soup-web-scraper-python/'},{label:'Wikipedia API',url:'https://www.mediawiki.org/wiki/API:Main_page'}],
+    yt:['beautifulsoup tutorial python','python web scraping project'] },
+
+  // ── Tier 3: Automation & Bots ──
+  { id:'discord-bot', tier:3, title:'Discord Productivity Bot', blurb:'A real Discord bot for your server: pomodoro sessions, reminders, polls, and a leaderboard — running 24/7 logic you wrote.',
+    skills:['discord.py','async/await','events','hosting'],
+    milestones:['Create a bot application and invite it to a server','Respond to slash commands with discord.py','Add a pomodoro command with timed pings','Add reminders and polls','Track usage stats in a leaderboard'],
+    resources:[{label:'discord.py docs',url:'https://discordpy.readthedocs.io/en/stable/'},{label:'Discord Developer Portal',url:'https://discord.com/developers/docs/intro'},{label:'asyncio — official docs',url:'https://docs.python.org/3/library/asyncio.html'}],
+    yt:['discord.py bot tutorial','python async await explained'] },
+  { id:'job-scraper', tier:3, title:'Job Listing Scraper', blurb:'Scrape job boards for roles matching your keywords, dedupe and score them, and export a daily spreadsheet of leads.',
+    skills:['scraping','CSV/Excel','dedup logic','scheduling'],
+    milestones:['Scrape listings from a job board with requests + BeautifulSoup','Extract title, company, location, link, and date','Score listings against your keyword profile','Dedupe across runs with a seen-IDs file','Export ranked results to CSV/Excel daily'],
+    resources:[{label:'Beautiful Soup docs',url:'https://www.crummy.com/software/BeautifulSoup/bs4/doc/'},{label:'openpyxl docs',url:'https://openpyxl.readthedocs.io/en/stable/'},{label:'Web scraping ethics & robots.txt',url:'https://realpython.com/python-web-scraping-practical-introduction/'}],
+    yt:['python job scraper project','python openpyxl tutorial'] },
+  { id:'auto-backup', tier:3, title:'Automated Backup Tool', blurb:'Watches your important folders, zips changed files on a schedule, rotates old backups, and reports what it saved.',
+    skills:['zipfile','hashing','scheduling','logging'],
+    milestones:['Zip a target folder with timestamped archive names','Detect changed files via hashes to skip no-op backups','Rotate: keep last N daily and weekly archives','Add proper logging with the logging module','Schedule it (Task Scheduler / cron) and document setup'],
+    resources:[{label:'zipfile — official docs',url:'https://docs.python.org/3/library/zipfile.html'},{label:'hashlib — official docs',url:'https://docs.python.org/3/library/hashlib.html'},{label:'logging HOWTO',url:'https://docs.python.org/3/howto/logging.html'}],
+    yt:['python backup script tutorial','python logging tutorial'] },
+  { id:'pdf-toolkit', tier:3, title:'PDF Toolkit', blurb:'A swiss-army CLI for PDFs: merge, split, rotate, watermark, and extract text — the utility everyone ends up needing.',
+    skills:['pypdf','CLI design','file handling'],
+    milestones:['Merge multiple PDFs into one','Split a PDF by page ranges','Add text watermarks to every page','Extract text to a .txt file','Wrap it all in a clean argparse CLI'],
+    resources:[{label:'pypdf docs',url:'https://pypdf.readthedocs.io/en/stable/'},{label:'argparse docs',url:'https://docs.python.org/3/library/argparse.html'},{label:'Working with PDFs (Real Python)',url:'https://realpython.com/pdf-python/'}],
+    yt:['python pdf manipulation pypdf','python cli tool tutorial'] },
+  { id:'email-automation', tier:3, title:'Email Automation Suite', blurb:'Connect to your inbox: auto-sort newsletters, send templated replies, and get a morning summary of what matters.',
+    skills:['imaplib','smtplib','email parsing','rules engine'],
+    milestones:['Connect to your inbox with imaplib (app password)','Parse senders, subjects, and bodies safely','Build keyword rules that label/move messages','Send templated emails with smtplib','Generate a daily inbox summary report'],
+    resources:[{label:'imaplib — official docs',url:'https://docs.python.org/3/library/imaplib.html'},{label:'email.parser docs',url:'https://docs.python.org/3/library/email.parser.html'},{label:'Sending emails (Real Python)',url:'https://realpython.com/python-send-email/'}],
+    yt:['python imap email tutorial','python email automation project'] },
+  { id:'reddit-digest', tier:3, title:'Reddit Digest Bot', blurb:'Compile the best posts from your favorite subreddits into a daily digest, ranked by your own scoring formula.',
+    skills:['PRAW / APIs','OAuth','ranking logic'],
+    milestones:['Register a Reddit app and authenticate with PRAW','Pull top posts from chosen subreddits','Score posts with your own formula (votes, comments, age)','Render a Markdown digest with links','Schedule a daily run and archive digests'],
+    resources:[{label:'PRAW docs',url:'https://praw.readthedocs.io/en/stable/'},{label:'Reddit API rules',url:'https://www.reddit.com/wiki/api/'},{label:'Markdown guide',url:'https://www.markdownguide.org/basic-syntax/'}],
+    yt:['praw reddit bot tutorial python','python reddit api project'] },
+
+  // ── Tier 4: Web Apps ──
+  { id:'flask-blog', tier:4, title:'Flask Blog with Auth', blurb:'A full blog platform: registration, login, posts with Markdown, comments — your first real full-stack deployment.',
+    skills:['Flask','SQLite','Jinja2','sessions','auth'],
+    milestones:['Set up Flask with templates and static files','Add SQLite models for users and posts','Implement register/login with hashed passwords','Create, edit, and render Markdown posts','Add comments and deploy it'],
+    resources:[{label:'Flask tutorial (official)',url:'https://flask.palletsprojects.com/en/stable/tutorial/'},{label:'Jinja2 docs',url:'https://jinja.palletsprojects.com/en/stable/'},{label:'werkzeug password hashing',url:'https://werkzeug.palletsprojects.com/en/stable/utils/'}],
+    yt:['flask blog tutorial','flask login authentication tutorial'] },
+  { id:'url-shortener', tier:4, title:'URL Shortener Service', blurb:'Your own bit.ly: shorten links, redirect visitors, and track click analytics on a dashboard.',
+    skills:['Flask','SQLite','redirects','base62'],
+    milestones:['Build the shorten endpoint with base62 codes','Store mappings in SQLite','Redirect short codes and count clicks','Add a stats page per link (clicks over time)','Add custom aliases and expiry dates'],
+    resources:[{label:'Flask quickstart',url:'https://flask.palletsprojects.com/en/stable/quickstart/'},{label:'sqlite3 — official docs',url:'https://docs.python.org/3/library/sqlite3.html'},{label:'HTTP redirects (MDN)',url:'https://developer.mozilla.org/en-US/docs/Web/HTTP/Redirections'}],
+    yt:['flask url shortener project','flask sqlite tutorial'] },
+  { id:'fastapi-notes', tier:4, title:'FastAPI Notes API', blurb:'A modern REST API with automatic interactive docs, validation, and token auth — the backend pattern startups actually use.',
+    skills:['FastAPI','pydantic','REST design','JWT'],
+    milestones:['Scaffold FastAPI with CRUD routes for notes','Define pydantic models for validation','Persist notes with SQLite','Add JWT token authentication','Explore the auto-generated /docs and write tests'],
+    resources:[{label:'FastAPI tutorial (official)',url:'https://fastapi.tiangolo.com/tutorial/'},{label:'pydantic docs',url:'https://docs.pydantic.dev/latest/'},{label:'FastAPI security guide',url:'https://fastapi.tiangolo.com/tutorial/security/'}],
+    yt:['fastapi tutorial','fastapi jwt authentication'] },
+  { id:'habit-web', tier:4, title:'Habit Tracker Web App', blurb:'A web habit tracker with streaks, a GitHub-style heatmap, and weekly email summaries — satisfying to use and to demo.',
+    skills:['Flask','charts','SQLite','date math'],
+    milestones:['Model habits and daily check-ins in SQLite','Build the check-in UI with Flask templates','Compute streaks and completion rates','Render a calendar heatmap of progress','Send a weekly summary email'],
+    resources:[{label:'Flask tutorial',url:'https://flask.palletsprojects.com/en/stable/tutorial/'},{label:'Chart.js docs',url:'https://www.chartjs.org/docs/latest/'},{label:'datetime docs',url:'https://docs.python.org/3/library/datetime.html'}],
+    yt:['flask habit tracker project','chart.js tutorial'] },
+  { id:'portfolio-cms', tier:4, title:'Portfolio Site with Admin Panel', blurb:'Your personal site, but dynamic: an admin dashboard where you add projects and posts without touching code.',
+    skills:['Flask','auth','CRUD','file uploads','deployment'],
+    milestones:['Build the public portfolio pages from database content','Create a password-protected admin panel','Add CRUD for projects with image uploads','Add a contact form with email notification','Deploy it live with a custom domain'],
+    resources:[{label:'Flask file uploads',url:'https://flask.palletsprojects.com/en/stable/patterns/fileuploads/'},{label:'Flask deployment options',url:'https://flask.palletsprojects.com/en/stable/deploying/'},{label:'Render free hosting',url:'https://render.com/docs'}],
+    yt:['flask portfolio website tutorial','deploy flask app'] },
+  { id:'chat-app', tier:4, title:'Real-Time Chat App', blurb:'Live chat with rooms and typing indicators over WebSockets — real-time systems look great on a resume.',
+    skills:['WebSockets','async','Flask-SocketIO','events'],
+    milestones:['Set up Flask-SocketIO with a basic lobby','Broadcast messages to all connected users','Add named rooms and join/leave events','Show online users and typing indicators','Persist recent history per room'],
+    resources:[{label:'Flask-SocketIO docs',url:'https://flask-socketio.readthedocs.io/en/latest/'},{label:'WebSockets explained (MDN)',url:'https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API'},{label:'python-socketio docs',url:'https://python-socketio.readthedocs.io/en/stable/'}],
+    yt:['flask socketio chat app tutorial','websockets explained'] },
+
+  // ── Tier 5: Data & Visualization ──
+  { id:'data-dashboard', tier:5, title:'Interactive Data Dashboard', blurb:'Take a real dataset and ship an interactive Streamlit dashboard with filters, charts, and insights anyone can explore.',
+    skills:['pandas','Streamlit','plotly','data cleaning'],
+    milestones:['Pick a Kaggle dataset and clean it with pandas','Build a Streamlit app with sidebar filters','Add interactive plotly charts','Add computed KPIs and an insights section','Deploy to Streamlit Community Cloud'],
+    resources:[{label:'Streamlit docs',url:'https://docs.streamlit.io/'},{label:'pandas 10-minute intro',url:'https://pandas.pydata.org/docs/user_guide/10min.html'},{label:'Plotly Python docs',url:'https://plotly.com/python/'}],
+    yt:['streamlit dashboard tutorial','pandas tutorial for beginners'] },
+  { id:'stock-analyzer', tier:5, title:'Stock Data Analyzer', blurb:'Download historical market data, compute indicators like moving averages and RSI, and visualize trends — a data-engineering classic.',
+    skills:['yfinance','pandas','matplotlib','time series'],
+    milestones:['Download historical prices with yfinance','Compute SMA, EMA, and RSI with pandas','Plot price + indicators with matplotlib','Compare multiple tickers on one chart','Export an analysis report per ticker'],
+    resources:[{label:'yfinance on PyPI',url:'https://pypi.org/project/yfinance/'},{label:'pandas time series guide',url:'https://pandas.pydata.org/docs/user_guide/timeseries.html'},{label:'matplotlib tutorials',url:'https://matplotlib.org/stable/tutorials/index.html'}],
+    yt:['python stock analysis pandas','matplotlib tutorial'] },
+  { id:'sentiment-analyzer', tier:5, title:'Review Sentiment Analyzer', blurb:'Feed it product reviews and it classifies sentiment, surfaces common complaints, and charts the results.',
+    skills:['NLP','TextBlob/NLTK','pandas','wordclouds'],
+    milestones:['Load a reviews dataset into pandas','Score sentiment per review with TextBlob','Extract the most common positive/negative phrases','Visualize sentiment distribution and trends','Build a word cloud of complaint keywords'],
+    resources:[{label:'TextBlob docs',url:'https://textblob.readthedocs.io/en/dev/'},{label:'NLTK book (free)',url:'https://www.nltk.org/book/'},{label:'wordcloud on PyPI',url:'https://pypi.org/project/wordcloud/'}],
+    yt:['python sentiment analysis tutorial','nltk tutorial python'] },
+  { id:'image-processor', tier:5, title:'Bulk Image Processing Tool', blurb:'Batch-resize, watermark, convert, and optimize hundreds of images at once — with before/after size reports.',
+    skills:['Pillow','batch processing','CLI','optimization'],
+    milestones:['Resize a folder of images preserving aspect ratio','Add text or logo watermarks','Convert formats and strip metadata','Optimize file sizes and report savings','Parallelize with concurrent.futures'],
+    resources:[{label:'Pillow handbook',url:'https://pillow.readthedocs.io/en/stable/handbook/index.html'},{label:'concurrent.futures docs',url:'https://docs.python.org/3/library/concurrent.futures.html'},{label:'Image processing (Real Python)',url:'https://realpython.com/image-processing-with-the-python-pillow-library/'}],
+    yt:['python pillow tutorial','python batch image resize'] },
+  { id:'spotify-wrapped', tier:5, title:'Personal Spotify Wrapped', blurb:'Use the Spotify API to analyze your own listening: top artists, genre shifts over time, and audio-feature trends — then chart it beautifully.',
+    skills:['spotipy','OAuth','pandas','visualization'],
+    milestones:['Authenticate with the Spotify API via spotipy','Pull your top tracks/artists across time ranges','Analyze genres and audio features with pandas','Build your own "Wrapped" charts','Export a shareable summary image'],
+    resources:[{label:'spotipy docs',url:'https://spotipy.readthedocs.io/'},{label:'Spotify Web API docs',url:'https://developer.spotify.com/documentation/web-api'},{label:'seaborn docs',url:'https://seaborn.pydata.org/'}],
+    yt:['spotipy tutorial python','python spotify api project'] },
+  { id:'csv-detective', tier:5, title:'Dataset Profiler', blurb:'Drop in any CSV and get an instant profile: types, distributions, outliers, missing data, and correlations — like pandas-profiling, but yours.',
+    skills:['pandas','numpy','statistics','HTML reports'],
+    milestones:['Infer column types and basic stats for any CSV','Detect outliers and missing-data patterns','Compute correlations between numeric columns','Flag likely data-quality issues','Generate a styled HTML report'],
+    resources:[{label:'pandas API reference',url:'https://pandas.pydata.org/docs/reference/index.html'},{label:'numpy quickstart',url:'https://numpy.org/doc/stable/user/quickstart.html'},{label:'pandas Styler',url:'https://pandas.pydata.org/docs/user_guide/style.html'}],
+    yt:['pandas data analysis project','exploratory data analysis python'] },
+
+  // ── Tier 6: AI & Advanced ──
+  { id:'ml-predictor', tier:6, title:'House Price Predictor', blurb:'End-to-end machine learning: clean real housing data, engineer features, train and compare models, and serve predictions via an API.',
+    skills:['scikit-learn','feature engineering','model eval','joblib'],
+    milestones:['Explore and clean a housing dataset','Engineer features and encode categoricals','Train linear regression and random forest models','Evaluate with cross-validation and pick a winner','Serve predictions through a small FastAPI endpoint'],
+    resources:[{label:'scikit-learn user guide',url:'https://scikit-learn.org/stable/user_guide.html'},{label:'Kaggle housing dataset',url:'https://www.kaggle.com/c/house-prices-advanced-regression-techniques'},{label:'ML crash course (Google)',url:'https://developers.google.com/machine-learning/crash-course'}],
+    yt:['scikit-learn tutorial','machine learning project python'] },
+  { id:'claude-chatbot', tier:6, title:'AI Assistant with the Claude API', blurb:'Build a real AI app: a chat assistant with conversation memory, tool use (it can run searches or math), and a clean web UI.',
+    skills:['Claude API','streaming','tool use','prompt design'],
+    milestones:['Set up the Anthropic SDK and send your first message','Build a chat loop with conversation history','Stream responses token-by-token to the UI','Add a tool the model can call (calculator or search)','Wrap it in a simple Flask/Streamlit interface'],
+    resources:[{label:'Claude API docs',url:'https://docs.anthropic.com/en/api/getting-started'},{label:'Anthropic Python SDK',url:'https://github.com/anthropics/anthropic-sdk-python'},{label:'Tool use guide',url:'https://docs.anthropic.com/en/docs/agents-and-tools/tool-use/overview'}],
+    yt:['claude api python tutorial','build ai chatbot python'] },
+  { id:'face-detection', tier:6, title:'Computer Vision Face Detector', blurb:'Detect faces in photos and live webcam video with OpenCV, blur them for privacy, and count people in frame.',
+    skills:['OpenCV','numpy','video processing'],
+    milestones:['Detect faces in images with OpenCV cascades or DNN','Draw bounding boxes and confidence scores','Process live webcam video in real time','Add a privacy mode that blurs detected faces','Count and log people-in-frame over time'],
+    resources:[{label:'OpenCV-Python tutorials',url:'https://docs.opencv.org/4.x/d6/d00/tutorial_py_root.html'},{label:'opencv-python on PyPI',url:'https://pypi.org/project/opencv-python/'},{label:'numpy docs',url:'https://numpy.org/doc/stable/'}],
+    yt:['opencv face detection python','opencv python tutorial'] },
+  { id:'recommender', tier:6, title:'Movie Recommendation Engine', blurb:'Build the algorithm behind Netflix-style suggestions: content-based and collaborative filtering on a real ratings dataset.',
+    skills:['pandas','cosine similarity','matrix ops','evaluation'],
+    milestones:['Load the MovieLens dataset with pandas','Build content-based recommendations from genres/tags','Build collaborative filtering with cosine similarity','Blend both into a hybrid recommender','Evaluate quality and serve via CLI or API'],
+    resources:[{label:'MovieLens datasets',url:'https://grouplens.org/datasets/movielens/'},{label:'scikit-learn similarity metrics',url:'https://scikit-learn.org/stable/modules/metrics.html'},{label:'pandas merge guide',url:'https://pandas.pydata.org/docs/user_guide/merging.html'}],
+    yt:['movie recommendation system python','collaborative filtering explained'] },
+  { id:'saas-starter', tier:6, title:'SaaS Starter Platform', blurb:'The capstone: a deployable SaaS skeleton with accounts, subscription tiers (Stripe test mode), a usage-metered API, and an admin dashboard.',
+    skills:['FastAPI','Stripe API','auth','PostgreSQL/SQLite','deployment'],
+    milestones:['Build user accounts with JWT auth in FastAPI','Integrate Stripe test-mode subscriptions','Meter API usage per plan tier','Build an admin dashboard with key metrics','Deploy with HTTPS and write proper docs'],
+    resources:[{label:'FastAPI docs',url:'https://fastapi.tiangolo.com/'},{label:'Stripe Python SDK (test mode)',url:'https://docs.stripe.com/api?lang=python'},{label:'SQLModel docs',url:'https://sqlmodel.tiangolo.com/'}],
+    yt:['fastapi stripe subscription tutorial','fastapi production deployment'] },
+  { id:'game-ai', tier:6, title:'Snake Game + AI Agent', blurb:'Build Snake in pygame, then build an AI that plays it better than you — pathfinding first, then a learning agent if you dare.',
+    skills:['pygame','pathfinding','algorithms','game loops'],
+    milestones:['Build playable Snake with pygame','Add scoring, speed-up, and game over screens','Write an A* pathfinding agent that plays automatically','Add survival heuristics for when no safe path exists','Benchmark your AI vs your own high score'],
+    resources:[{label:'pygame docs',url:'https://www.pygame.org/docs/'},{label:'A* pathfinding (Red Blob Games)',url:'https://www.redblobgames.com/pathfinding/a-star/introduction.html'},{label:'pygame newbie guide',url:'https://www.pygame.org/docs/tut/newbieguide.html'}],
+    yt:['pygame snake tutorial','a star pathfinding python'] },
+];
+
+/* state */
+function podToday() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+function loadPod() {
+  try { const s = JSON.parse(localStorage.getItem('cc_pod') || 'null'); if (s && s.projects) return s; } catch(e) {}
+  return { startDate: podToday(), lastRollDate: null, options: [], activeId: null, focusId: null, projects: {}, completed: 0 };
+}
+function savePod() { try { localStorage.setItem('cc_pod', JSON.stringify(pod)); } catch(e) {} }
+let pod = loadPod();
+
+function podTier() { return Math.min(6, 1 + (pod.completed || 0)); }
+function podDayNum() {
+  const ms = new Date(podToday()) - new Date(pod.startDate);
+  return Math.max(1, Math.round(ms / 86400000) + 1);
+}
+function podGet(id) { return POD_BANK.find(p => p.id === id); }
+
+/* dice roll: 3 options from current tier, topping up from neighbors if exhausted */
+function podRoll() {
+  const tier = podTier();
+  const done = new Set(Object.entries(pod.projects).filter(([,v]) => v.status === 'completed').map(([k]) => k));
+  let pool = POD_BANK.filter(p => p.tier === tier && !done.has(p.id));
+  for (let t = tier - 1; pool.length < 3 && t >= 1; t--) pool = pool.concat(POD_BANK.filter(p => p.tier === t && !done.has(p.id)));
+  for (let t = tier + 1; pool.length < 3 && t <= 6; t++) pool = pool.concat(POD_BANK.filter(p => p.tier === t && !done.has(p.id)));
+  const picks = [];
+  pool = pool.slice();
+  while (picks.length < 3 && pool.length) picks.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0].id);
+  pod.options = picks;
+  pod.lastRollDate = podToday();
+  savePod();
+}
+
+function renderPodRoll() {
+  const tier = podTier();
+  document.getElementById('podHeaderMeta').textContent = `Day ${podDayNum()} · Tier ${tier} — ${POD_TIER_NAMES[tier]} · ${pod.completed || 0} shipped`;
+  document.getElementById('podDayLabel').textContent = `Day ${podDayNum()} · Tier ${tier}: ${POD_TIER_NAMES[tier]}`;
+  const optsEl = document.getElementById('podOptions');
+  optsEl.innerHTML = '';
+
+  // banner for project in progress
+  const activeEntry = Object.entries(pod.projects).find(([,v]) => v.status === 'in-progress');
+  if (activeEntry) {
+    const p = podGet(activeEntry[0]);
+    if (p) {
+      const b = document.createElement('div');
+      b.className = 'pod-active-banner';
+      b.innerHTML = `<span>🚧</span><span class="pab-title">${esc(p.title)}</span><span class="pab-meta">in progress · ${activeEntry[1].pomos || 0} 🍅 · resume →</span>`;
+      b.addEventListener('click', () => openPodDetail(p.id));
+      optsEl.appendChild(b);
+    }
+  }
+
+  const stale = pod.lastRollDate !== podToday();
+  document.getElementById('podRollHint').textContent =
+    !pod.options.length ? 'Roll for today\'s three Python projects'
+    : stale ? 'New day — roll for fresh projects, or pick from yesterday\'s'
+    : 'Pick one to build — or re-roll if none spark joy';
+
+  pod.options.map(podGet).filter(Boolean).forEach(p => {
+    const card = document.createElement('div');
+    card.className = 'pod-option-card';
+    card.innerHTML = `
+      <span class="pod-tier-badge">Tier ${p.tier} · ${esc(POD_TIER_NAMES[p.tier])}</span>
+      <div class="pod-option-title">${esc(p.title)}</div>
+      <div class="pod-option-blurb">${esc(p.blurb)}</div>
+      <div class="pod-skills">${p.skills.map(s => `<span class="pod-skill-chip">${esc(s)}</span>`).join('')}</div>
+      <div class="pod-option-cta">Build this →</div>`;
+    card.addEventListener('click', () => openPodDetail(p.id));
+    optsEl.appendChild(card);
+  });
+}
+
+document.getElementById('podDice')?.addEventListener('click', () => {
+  const dice = document.getElementById('podDice');
+  dice.classList.remove('rolling'); void dice.offsetWidth; dice.classList.add('rolling');
+  const faces = ['⚀','⚁','⚂','⚃','⚄','⚅'];
+  let n = 0;
+  const spin = setInterval(() => { document.getElementById('podDiceCube').textContent = faces[Math.floor(Math.random()*6)]; if (++n > 7) clearInterval(spin); }, 70);
+  setTimeout(() => { podRoll(); renderPodRoll(); }, 580);
+});
+
+/* ── detail view ── */
+let podDetailId = null;
+
+function podProj(id) {
+  if (!pod.projects[id]) pod.projects[id] = { status: 'not-started', done: {}, pomos: 0 };
+  return pod.projects[id];
+}
+
+function openPodDetail(id) {
+  const p = podGet(id); if (!p) return;
+  podDetailId = id;
+  const st = podProj(id);
+  if (st.status === 'not-started') { st.status = 'in-progress'; pod.activeId = id; savePod(); }
+  document.getElementById('podRollView').style.display = 'none';
+  const view = document.getElementById('podDetailView');
+  view.style.display = 'block';
+  view.innerHTML = `
+    <div class="pod-detail-top">
+      <button class="pod-back-btn" id="podBack">← Back</button>
+      <div class="pod-detail-title">${esc(p.title)}</div>
+      <span class="pod-pomo-count">🍅 <span id="podPomoCount">${st.pomos || 0}</span> sessions</span>
+      <select class="pod-status-sel" id="podStatusSel">
+        <option value="in-progress">In progress</option>
+        <option value="completed">Completed ✓</option>
+      </select>
+      <button class="pod-focus-btn" id="podFocusBtn">▶ Focus on this</button>
+    </div>
+    <span class="pod-tier-badge">Tier ${p.tier} · ${esc(POD_TIER_NAMES[p.tier])}</span>
+    <div class="pod-detail-blurb">${esc(p.blurb)}</div>
+    <div class="pod-detail-grid">
+      <div class="pod-panel">
+        <div class="pod-panel-title">Milestones</div>
+        <div class="pod-progress-bar"><div class="pod-progress-fill" id="podMsFill"></div></div>
+        <div id="podMilestones"></div>
+      </div>
+      <div class="pod-panel">
+        <div class="pod-panel-title">Resources</div>
+        ${p.resources.map(r => `<a class="pod-resource" href="${esc(r.url)}" target="_blank" rel="noopener"><span class="pr-ico">↗</span>${esc(r.label)}</a>`).join('')}
+      </div>
+      <div class="pod-panel">
+        <div class="pod-panel-title">Video Tutorials</div>
+        <div class="pod-yt-player" id="podYtPlayer"><div class="pod-yt-empty"><span>▶</span><span>Search a topic below, then paste any YouTube link to play it here</span></div></div>
+        <div class="pod-yt-pills">${p.yt.map(q => `<button class="pod-yt-pill" data-q="${esc(q)}">🔎 ${esc(q)}</button>`).join('')}</div>
+        <div class="pod-yt-row">
+          <input class="pod-yt-input" id="podYtInput" placeholder="Paste a YouTube link to play it here…"/>
+          <button class="pod-btn-sm" id="podYtPlay">Play</button>
+        </div>
+      </div>
+      <div class="pod-panel">
+        <div class="pod-panel-title">GitHub</div>
+        <div class="pod-gh-status" id="podGhStatus">checking workspace…</div>
+        <div class="pod-gh-row">
+          <button class="pod-btn-sm" id="podGhInit">Init git + first commit</button>
+          <a class="pod-btn-sm" style="text-decoration:none" href="https://github.com/new?name=${encodeURIComponent(p.id)}" target="_blank" rel="noopener">Create repo on GitHub ↗</a>
+        </div>
+        <div class="pod-gh-row">
+          <input class="pod-gh-input" id="podGhUrl" placeholder="https://github.com/you/${esc(p.id)}.git"/>
+          <button class="pod-btn-sm" id="podGhPush">Push</button>
+        </div>
+      </div>
+      <div class="pod-panel pod-terminal">
+        <div class="pod-panel-title">Terminal — <span style="text-transform:none;letter-spacing:0">projects/${esc(p.id)}</span></div>
+        <div class="pod-term-out" id="podTermOut"></div>
+        <div class="pod-term-row">
+          <span class="pod-term-prompt">${esc(p.id)}&gt;</span>
+          <input class="pod-term-input" id="podTermIn" placeholder='try: python main.py — or ask Claude below'/>
+        </div>
+        <div class="pod-term-row">
+          <input class="pod-term-input" id="podClaudeIn" placeholder="Ask Claude Code about this project… (runs claude -p in the folder)"/>
+          <button class="pod-btn-sm" id="podClaudeAsk">Ask Claude</button>
+        </div>
+      </div>
+    </div>`;
+
+  document.getElementById('podStatusSel').value = st.status === 'completed' ? 'completed' : 'in-progress';
+  renderPodMilestones(p, st);
+
+  // wiring
+  document.getElementById('podBack').addEventListener('click', closePodDetail);
+  document.getElementById('podStatusSel').addEventListener('change', e => {
+    const was = st.status;
+    st.status = e.target.value;
+    if (st.status === 'completed' && was !== 'completed') { pod.completed = (pod.completed || 0) + 1; podTermPrint('dim', `🎉 Project shipped! Tier ${podTier()} unlocked.`); }
+    if (st.status !== 'completed' && was === 'completed') pod.completed = Math.max(0, (pod.completed || 0) - 1);
+    savePod();
+  });
+  document.getElementById('podFocusBtn').addEventListener('click', () => podFocus(id));
+  view.querySelectorAll('.pod-yt-pill').forEach(b => b.addEventListener('click', () =>
+    window.open('https://www.youtube.com/results?search_query=' + encodeURIComponent(b.dataset.q), '_blank', 'noopener')));
+  const ytPlay = () => podPlayYt(document.getElementById('podYtInput').value);
+  document.getElementById('podYtPlay').addEventListener('click', ytPlay);
+  document.getElementById('podYtInput').addEventListener('keydown', e => { if (e.key === 'Enter') ytPlay(); });
+  document.getElementById('podTermIn').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && e.target.value.trim()) { podRunCmd(id, e.target.value.trim()); e.target.value = ''; }
+  });
+  const askClaude = () => {
+    const q = document.getElementById('podClaudeIn').value.trim();
+    if (!q) return;
+    document.getElementById('podClaudeIn').value = '';
+    podRunCmd(id, `claude -p "${q.replace(/"/g, "'")}"`, 'claude is thinking… (this can take a minute)');
+  };
+  document.getElementById('podClaudeAsk').addEventListener('click', askClaude);
+  document.getElementById('podClaudeIn').addEventListener('keydown', e => { if (e.key === 'Enter') askClaude(); });
+  document.getElementById('podGhInit').addEventListener('click', () =>
+    podRunCmd(id, 'git init -b main && git add -A && git commit -m "Initial commit"'));
+  document.getElementById('podGhPush').addEventListener('click', () => {
+    const url = document.getElementById('podGhUrl').value.trim();
+    if (!/^https:\/\/github\.com\/[\w.-]+\/[\w.-]+(\.git)?$/.test(url)) { podTermPrint('err', 'Enter a valid GitHub repo URL like https://github.com/you/repo.git'); return; }
+    podRunCmd(id, `git remote remove origin 2>nul & git remote add origin ${url} && git push -u origin main`);
+  });
+
+  podEnsureWorkspace(p);
+}
+
+function closePodDetail() {
+  podDetailId = null;
+  document.getElementById('podDetailView').style.display = 'none';
+  document.getElementById('podRollView').style.display = 'flex';
+  renderPodRoll();
+}
+
+function renderPodMilestones(p, st) {
+  const wrap = document.getElementById('podMilestones');
+  wrap.innerHTML = '';
+  p.milestones.forEach((m, i) => {
+    const row = document.createElement('label');
+    row.className = 'pod-milestone' + (st.done[i] ? ' done' : '');
+    row.innerHTML = `<input type="checkbox" ${st.done[i] ? 'checked' : ''}/><span>${esc(m)}</span>`;
+    row.querySelector('input').addEventListener('change', e => {
+      st.done[i] = e.target.checked; savePod(); renderPodMilestones(p, st);
+    });
+    wrap.appendChild(row);
+  });
+  const doneCount = p.milestones.filter((_, i) => st.done[i]).length;
+  document.getElementById('podMsFill').style.width = (doneCount / p.milestones.length * 100) + '%';
+}
+
+function podPlayYt(input) {
+  const m = String(input || '').match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/) ||
+            String(input || '').trim().match(/^([a-zA-Z0-9_-]{11})$/);
+  const player = document.getElementById('podYtPlayer');
+  if (!m) { player.innerHTML = '<div class="pod-yt-empty"><span>▶</span><span>That doesn\'t look like a YouTube link</span></div>'; return; }
+  player.innerHTML = `<iframe src="https://www.youtube-nocookie.com/embed/${m[1]}?autoplay=1" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>`;
+}
+
+/* ── workspace + terminal (talks to server.js) ── */
+function podTermPrint(cls, text) {
+  const out = document.getElementById('podTermOut');
+  if (!out) return;
+  const line = document.createElement('div');
+  if (cls) line.className = 't-' + cls;
+  line.textContent = text;
+  out.appendChild(line);
+  out.scrollTop = out.scrollHeight;
+}
+
+async function podEnsureWorkspace(p) {
+  const status = document.getElementById('podGhStatus');
+  try {
+    let st = await (await fetch(`/api/pod/status?slug=${p.id}`)).json();
+    if (!st.exists) {
+      const readme = `# ${p.title}\n\n${p.blurb}\n\n## Milestones\n${p.milestones.map(m => `- [ ] ${m}`).join('\n')}\n\n## Skills\n${p.skills.join(', ')}\n`;
+      await fetch('/api/pod/create', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slug: p.id, title: p.title, readme }) });
+      st = await (await fetch(`/api/pod/status?slug=${p.id}`)).json();
+      podTermPrint('dim', `Workspace created: ${st.path}`);
+      podTermPrint('dim', 'README.md and main.py are ready. Try: python main.py');
+    } else {
+      podTermPrint('dim', `Workspace: ${st.path}`);
+    }
+    status.textContent = st.git ? 'git: initialized ✓' : 'git: not initialized yet';
+  } catch (e) {
+    status.textContent = 'server API unavailable';
+    podTermPrint('err', 'Terminal needs the new server — restart the preview (node server.js) and reload.');
+  }
+}
+
+let podTermBusy = false;
+async function podRunCmd(id, cmd, busyMsg) {
+  if (podTermBusy) { podTermPrint('dim', '…still running the last command'); return; }
+  podTermBusy = true;
+  podTermPrint('cmd', `${id}> ${cmd}`);
+  if (busyMsg) podTermPrint('dim', busyMsg);
+  try {
+    const res = await fetch('/api/term', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slug: id, cmd }) });
+    const r = await res.json();
+    if (r.error) podTermPrint('err', r.error);
+    else {
+      if (r.out) podTermPrint('', r.out.trimEnd());
+      if (r.err) podTermPrint('err', r.err.trimEnd());
+      if (r.timedOut) podTermPrint('err', '⏱ command timed out (5 min limit)');
+      podTermPrint('dim', `exit ${r.code}`);
+      // refresh git status line after git commands
+      if (/^git\b/.test(cmd)) {
+        try { const st = await (await fetch(`/api/pod/status?slug=${id}`)).json();
+          const el = document.getElementById('podGhStatus');
+          if (el) el.textContent = st.git ? 'git: initialized ✓' : 'git: not initialized yet';
+        } catch(e) {}
+      }
+    }
+  } catch (e) {
+    podTermPrint('err', 'Could not reach the server API — restart the preview server (node server.js).');
+  }
+  podTermBusy = false;
+}
+
+/* ── pomodoro link ── */
+function podFocus(id) {
+  pod.focusId = id; savePod();
+  document.querySelector('.nav-tab[data-tab="focus"]')?.click();
+  setMode('work');
+  startTimer();
+}
+
+function podOnPomoComplete() {
+  if (!pod.focusId || !pod.projects[pod.focusId]) return;
+  pod.projects[pod.focusId].pomos = (pod.projects[pod.focusId].pomos || 0) + 1;
+  savePod();
+  const el = document.getElementById('podPomoCount');
+  if (el && podDetailId === pod.focusId) el.textContent = pod.projects[pod.focusId].pomos;
+}
 
 /* ─── BOOT ───────────────────────────────────────────────── */
 
@@ -1935,6 +2436,7 @@ if (activeNotebookId) renderNbWorkspace();
 renderYtHistory();
 renderVbSidebar();
 renderVbCanvas();
+renderPodRoll();
 
 requestAnimationFrame(() => initVisualizer());
 window.addEventListener('load', () => setTimeout(initGoogleAuth, 500));
