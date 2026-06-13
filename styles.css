@@ -1081,6 +1081,72 @@ body {
   font-weight: 600;
 }
 
+/* ─── GOOGLE SIGN-IN ─────────────────────────────────────── */
+
+.google-signin-area {
+  display: flex;
+  flex-direction: column;
+}
+
+.google-profile-area {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.google-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border);
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.google-profile-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.google-profile-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.google-profile-email {
+  font-size: 11px;
+  color: var(--text3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+}
+
+.google-signout-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--text2);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 10px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color 0.15s, color 0.15s;
+}
+.google-signout-btn:hover {
+  border-color: var(--text3);
+  color: var(--text);
+}
+
 /* ─── PLACEHOLDER ────────────────────────────────────────── */
 
 .placeholder-state {
@@ -3527,3 +3593,205 @@ body {
 .pod-recs-msg { font-size: 11px; color: var(--text3); padding: 8px 2px; }
 
 .pod-yt-pill.active { color: #fff; border-color: rgba(255,255,255,0.45); background: var(--card-hi); }
+
+/* ─── JOURNAL ────────────────────────────────────────────── */
+
+#tab-journal {
+  display: none;
+  padding: 0;
+  overflow: hidden;
+}
+#tab-journal.active {
+  display: flex;
+}
+
+.journal-layout {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.journal-sidebar {
+  width: 190px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+}
+
+.journal-sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 16px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.journal-sidebar-title {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text3);
+}
+
+.journal-new-btn {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text2);
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s;
+}
+.journal-new-btn:hover { background: var(--card-hi); color: var(--text); }
+
+.journal-entry-list {
+  list-style: none;
+  margin: 0;
+  padding: 8px 0;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.journal-entry-item {
+  padding: 9px 16px;
+  cursor: pointer;
+  border-radius: 0;
+  transition: background 0.12s;
+  border-left: 2px solid transparent;
+}
+.journal-entry-item:hover { background: var(--surface2); }
+.journal-entry-item.active {
+  background: var(--surface2);
+  border-left-color: var(--text2);
+}
+
+.journal-entry-date {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.journal-entry-preview {
+  font-size: 10px;
+  color: var(--text3);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.journal-editor {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.journal-editor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 24px 12px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.journal-editor-date {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.journal-delete-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--text3);
+  font-size: 11px;
+  padding: 4px 10px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+.journal-delete-btn:hover { border-color: #e05; color: #e05; }
+
+.journal-textarea {
+  flex: 1;
+  width: 100%;
+  background: transparent;
+  border: none;
+  outline: none;
+  resize: none;
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.75;
+  padding: 24px;
+  font-family: var(--mono);
+  box-sizing: border-box;
+}
+.journal-textarea::placeholder { color: var(--text3); }
+
+.journal-autosave {
+  height: 24px;
+  padding: 0 24px 6px;
+  font-size: 10px;
+  color: var(--text3);
+  flex-shrink: 0;
+}
+
+/* ─── SHORTCUTS TABLE ────────────────────────────────────── */
+
+.shortcuts-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.shortcuts-table tr {
+  border-bottom: 1px solid var(--border);
+}
+
+.shortcuts-table td {
+  padding: 8px 4px;
+  color: var(--text2);
+}
+
+.shortcuts-table td:first-child {
+  color: var(--text);
+  font-weight: 500;
+  width: 60%;
+}
+
+.shortcut-key {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.shortcut-badge {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 2px 7px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  white-space: nowrap;
+}
+.shortcut-badge:hover { border-color: var(--text3); background: var(--card-hi); }
+.shortcut-badge.listening {
+  border-color: var(--white);
+  background: var(--card-hi);
+  color: var(--text3);
+}

@@ -1186,11 +1186,83 @@ document.getElementById('btnYtClear').addEventListener('click', () => {
   document.getElementById('ytInput').focus();
 });
 
+/* ─── GOOGLE SIGN-IN (account) ───────────────────────────── */
+
+let googleUser = null; // { id, name, email, picture }
+
+function settingsKey(key) {
+  return googleUser ? `u_${googleUser.id}_${key}` : key;
+}
+
+function parseJwt(token) {
+  try {
+    return JSON.parse(atob(token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')));
+  } catch(e) { return null; }
+}
+
+function onGoogleSignIn(credential) {
+  const payload = parseJwt(credential);
+  if (!payload) return;
+  googleUser = { id: payload.sub, name: payload.name, email: payload.email, picture: payload.picture };
+  localStorage.setItem('google_user', JSON.stringify(googleUser));
+  renderGoogleProfile();
+  loadSettings(); // reload settings scoped to this user
+}
+
+function renderGoogleProfile() {
+  if (googleUser) {
+    document.getElementById('googleSignedOut').style.display = 'none';
+    document.getElementById('googleSignedIn').style.display  = 'flex';
+    document.getElementById('googleAvatar').src              = googleUser.picture || '';
+    document.getElementById('googleProfileName').textContent = googleUser.name   || '';
+    document.getElementById('googleProfileEmail').textContent= googleUser.email  || '';
+  } else {
+    document.getElementById('googleSignedOut').style.display = 'flex';
+    document.getElementById('googleSignedIn').style.display  = 'none';
+  }
+}
+
+const SIGNIN_CLIENT_ID = '975788598714-8bbmso43rl6mamdi5k70huke2sc961sc.apps.googleusercontent.com';
+
+function initGoogleSignIn() {
+  // Restore previous session
+  try {
+    const saved = JSON.parse(localStorage.getItem('google_user') || 'null');
+    if (saved && saved.id) googleUser = saved;
+  } catch(e) {}
+  renderGoogleProfile();
+
+  // Wait for GSI library then render button
+  function tryRender() {
+    if (typeof google === 'undefined' || !google.accounts) { setTimeout(tryRender, 300); return; }
+    google.accounts.id.initialize({
+      client_id: SIGNIN_CLIENT_ID,
+      callback: (resp) => onGoogleSignIn(resp.credential),
+      auto_select: false,
+    });
+    google.accounts.id.renderButton(document.getElementById('googleSignInBtn'), {
+      theme: 'filled_black',
+      size: 'medium',
+      text: 'signin_with',
+      shape: 'rectangular',
+    });
+  }
+  tryRender();
+}
+
+document.getElementById('btnGoogleSignOut').addEventListener('click', () => {
+  googleUser = null;
+  localStorage.removeItem('google_user');
+  if (typeof google !== 'undefined' && google.accounts) google.accounts.id.disableAutoSelect();
+  renderGoogleProfile();
+  loadSettings();
+});
+
 /* ─── SETTINGS ───────────────────────────────────────────── */
 
 function loadSettings() {
-  document.getElementById('inputGoogleClientId').value  = localStorage.getItem('googleClientId')  || '';
-  document.getElementById('inputSpotifyClientId').value = localStorage.getItem('spotifyClientId') || '';
+  document.getElementById('inputGoogleClientId').value  = localStorage.getItem(settingsKey('googleClientId'))  || '';
+  document.getElementById('inputSpotifyClientId').value = localStorage.getItem(settingsKey('spotifyClientId')) || '';
   const redirectUri=window.location.origin+window.location.pathname.replace(/\/?$/,'/');
   const d=document.getElementById('redirectUriDisplay');
   if(d) d.textContent=redirectUri;
@@ -1199,6 +1271,9 @@ function loadSettings() {
 }
 
 document.getElementById('btnSaveSettings').addEventListener('click',()=>{
+  localStorage.setItem(settingsKey('googleClientId'),  document.getElementById('inputGoogleClientId').value.trim());
+  localStorage.setItem(settingsKey('spotifyClientId'), document.getElementById('inputSpotifyClientId').value.trim());
+  // also keep a global copy so Spotify/Calendar can find it regardless of sign-in state
   localStorage.setItem('googleClientId',  document.getElementById('inputGoogleClientId').value.trim());
   localStorage.setItem('spotifyClientId', document.getElementById('inputSpotifyClientId').value.trim());
   const msg=document.getElementById('settingsSavedMsg');
@@ -2532,6 +2607,7 @@ function podOnPomoComplete() {
 
 /* ─── BOOT ───────────────────────────────────────────────── */
 
+initGoogleSignIn();
 loadSettings();
 loadTheme();
 loadNotebooks();
@@ -2551,3 +2627,217 @@ requestAnimationFrame(() => initVisualizer());
 window.addEventListener('load', () => setTimeout(initGoogleAuth, 500));
 handleSpotifyCallback();
 if (localStorage.getItem('sp_token')){ showSpotifyPlayer(); pollNowPlaying(); }
+
+/* ═══════════════════════════════════════════════════════════
+   JOURNAL
+   ═══════════════════════════════════════════════════════════ */
+
+let journalEntries = [];   // [{ id, date:'YYYY-MM-DD', content }]  sorted newest first
+let activeJournalId = null;
+let journalSaveTimer = null;
+
+function journalToday() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function journalFmt(dateStr) {
+  // "2025-06-13" → "Fri, Jun 13 2025"
+  const [y,m,d] = dateStr.split('-').map(Number);
+  const dt = new Date(y, m-1, d);
+  return dt.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric', year:'numeric' });
+}
+
+function loadJournal() {
+  try { journalEntries = JSON.parse(localStorage.getItem('journal_entries') || '[]'); } catch(e) { journalEntries = []; }
+}
+
+function saveJournal() {
+  localStorage.setItem('journal_entries', JSON.stringify(journalEntries));
+}
+
+function journalOpenEntry(id) {
+  activeJournalId = id;
+  const entry = journalEntries.find(e => e.id === id);
+  if (!entry) return;
+  document.getElementById('journalEditorDate').textContent = journalFmt(entry.date);
+  document.getElementById('journalTextarea').value = entry.content;
+  document.getElementById('journalAutosave').textContent = '';
+  renderJournalList();
+}
+
+function journalNewEntry() {
+  const today = journalToday();
+  let existing = journalEntries.find(e => e.date === today);
+  if (existing) { journalOpenEntry(existing.id); return; }
+  const entry = { id: uid(), date: today, content: '' };
+  journalEntries.unshift(entry);
+  saveJournal();
+  renderJournalList();
+  journalOpenEntry(entry.id);
+}
+
+function renderJournalList() {
+  const ul = document.getElementById('journalEntryList');
+  if (!ul) return;
+  ul.innerHTML = journalEntries.map(e => {
+    const preview = e.content.trim().slice(0,50).replace(/\n/g,' ') || 'Empty';
+    const active = e.id === activeJournalId ? ' active' : '';
+    return `<li class="journal-entry-item${active}" data-jid="${e.id}">
+      <div class="journal-entry-date">${journalFmt(e.date)}</div>
+      <div class="journal-entry-preview">${esc(preview)}</div>
+    </li>`;
+  }).join('');
+  ul.querySelectorAll('.journal-entry-item').forEach(li => {
+    li.addEventListener('click', () => journalOpenEntry(li.dataset.jid));
+  });
+}
+
+function initJournal() {
+  loadJournal();
+  // Auto-open today's entry (create if none)
+  const today = journalToday();
+  if (journalEntries.length === 0 || !journalEntries.find(e => e.date === today)) {
+    const entry = { id: uid(), date: today, content: '' };
+    journalEntries.unshift(entry);
+    saveJournal();
+  }
+  renderJournalList();
+  journalOpenEntry(journalEntries[0].id);
+
+  // Autosave on type
+  document.getElementById('journalTextarea').addEventListener('input', () => {
+    const entry = journalEntries.find(e => e.id === activeJournalId);
+    if (!entry) return;
+    entry.content = document.getElementById('journalTextarea').value;
+    clearTimeout(journalSaveTimer);
+    document.getElementById('journalAutosave').textContent = 'Saving…';
+    journalSaveTimer = setTimeout(() => {
+      saveJournal();
+      renderJournalList();
+      document.getElementById('journalAutosave').textContent = 'Saved';
+      setTimeout(() => { document.getElementById('journalAutosave').textContent = ''; }, 1500);
+    }, 800);
+  });
+
+  document.getElementById('btnJournalNew').addEventListener('click', journalNewEntry);
+
+  document.getElementById('btnJournalDelete').addEventListener('click', () => {
+    if (!activeJournalId) return;
+    if (!confirm('Delete this entry?')) return;
+    journalEntries = journalEntries.filter(e => e.id !== activeJournalId);
+    saveJournal();
+    activeJournalId = null;
+    renderJournalList();
+    if (journalEntries.length > 0) journalOpenEntry(journalEntries[0].id);
+    else { document.getElementById('journalEditorDate').textContent = ''; document.getElementById('journalTextarea').value = ''; }
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════
+   KEYBOARD SHORTCUTS
+   ═══════════════════════════════════════════════════════════ */
+
+const DEFAULT_SHORTCUTS = [
+  { id:'tab_focus',    label:'Go to Focus',          key:'1' },
+  { id:'tab_project',  label:'Go to Project',         key:'2' },
+  { id:'tab_notes',    label:'Go to Vision',          key:'3' },
+  { id:'tab_calendar', label:'Go to Calendar',        key:'4' },
+  { id:'tab_habits',   label:'Go to Habits',          key:'5' },
+  { id:'tab_journal',  label:'Go to Journal',         key:'6' },
+  { id:'tab_settings', label:'Go to Settings',        key:',' },
+  { id:'new_task',     label:'New Task',              key:'n' },
+  { id:'timer_toggle', label:'Start / Stop Timer',    key:'t' },
+  { id:'timer_reset',  label:'Reset Timer',           key:'r' },
+];
+
+let shortcuts = [];
+
+function loadShortcuts() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('cc_shortcuts') || 'null');
+    if (Array.isArray(saved) && saved.length === DEFAULT_SHORTCUTS.length) {
+      shortcuts = saved;
+    } else {
+      shortcuts = DEFAULT_SHORTCUTS.map(s => ({...s}));
+    }
+  } catch(e) {
+    shortcuts = DEFAULT_SHORTCUTS.map(s => ({...s}));
+  }
+}
+
+function saveShortcuts() {
+  localStorage.setItem('cc_shortcuts', JSON.stringify(shortcuts));
+}
+
+function applyShortcuts() {
+  document.addEventListener('keydown', (e) => {
+    // Skip if typing in an input/textarea
+    const tag = document.activeElement?.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || document.activeElement?.isContentEditable) return;
+
+    const sc = shortcuts.find(s => s.key.toLowerCase() === e.key.toLowerCase());
+    if (!sc) return;
+
+    if (sc.id.startsWith('tab_')) {
+      const tabName = sc.id.replace('tab_', '');
+      document.querySelector(`.nav-tab[data-tab="${tabName}"]`)?.click();
+      e.preventDefault();
+    } else if (sc.id === 'new_task') {
+      document.querySelector('.nav-tab[data-tab="focus"]')?.click();
+      setTimeout(() => document.getElementById('btnAddTask')?.click(), 50);
+      e.preventDefault();
+    } else if (sc.id === 'timer_toggle') {
+      document.getElementById('btnPomoToggle')?.click();
+      e.preventDefault();
+    } else if (sc.id === 'timer_reset') {
+      document.getElementById('btnPomoReset')?.click();
+      e.preventDefault();
+    }
+  });
+}
+
+function renderShortcutsTable() {
+  const table = document.getElementById('shortcutsTable');
+  if (!table) return;
+  table.innerHTML = shortcuts.map(sc => `
+    <tr>
+      <td>${sc.label}</td>
+      <td><span class="shortcut-badge" data-scid="${sc.id}">${esc(sc.key)}</span></td>
+    </tr>
+  `).join('');
+
+  table.querySelectorAll('.shortcut-badge').forEach(badge => {
+    badge.addEventListener('click', () => {
+      if (badge.classList.contains('listening')) return;
+      badge.classList.add('listening');
+      const orig = badge.textContent;
+      badge.textContent = '…press key';
+      const handler = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (e.key === 'Escape') { badge.classList.remove('listening'); badge.textContent = orig; document.removeEventListener('keydown', handler, true); return; }
+        const sc = shortcuts.find(s => s.id === badge.dataset.scid);
+        if (sc) { sc.key = e.key; saveShortcuts(); }
+        badge.classList.remove('listening');
+        renderShortcutsTable();
+        document.removeEventListener('keydown', handler, true);
+      };
+      document.addEventListener('keydown', handler, true);
+    });
+  });
+}
+
+document.getElementById('btnResetShortcuts').addEventListener('click', () => {
+  shortcuts = DEFAULT_SHORTCUTS.map(s => ({...s}));
+  saveShortcuts();
+  renderShortcutsTable();
+});
+
+// Re-render shortcuts table when settings tab is opened
+document.querySelector('.nav-tab[data-tab="settings"]').addEventListener('click', renderShortcutsTable);
+
+// Init
+loadShortcuts();
+applyShortcuts();
+initJournal();
