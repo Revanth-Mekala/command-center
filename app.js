@@ -1647,13 +1647,58 @@ document.addEventListener('mouseup', () => {
 
 function loadVb() {
   try { vbBoards = JSON.parse(localStorage.getItem('vb_boards') || '[]'); } catch(e) { vbBoards = []; }
+  // Migration: existing local boards predate timestamping — stamp them as current so a
+  // freshly git-pulled default file can't silently overwrite real local data on first sync.
+  if (vbBoards.length && !localStorage.getItem('vb_boards_at')) {
+    try { localStorage.setItem('vb_boards_at', String(Date.now())); } catch(e) {}
+  }
   if (!vbBoards.length) {
     vbBoards = [{ id:uid(), name:'My Vision', panX:0, panY:0, vision:{title:'My Goal',img:''}, bubbles:[] }];
   }
   if (!vbActiveId || !vbBoards.find(b=>b.id===vbActiveId)) vbActiveId = vbBoards[0]?.id || null;
 }
 
-function saveVb() { try { localStorage.setItem('vb_boards', JSON.stringify(vbBoards)); } catch(e) {} }
+function saveVb() {
+  const at = Date.now();
+  try {
+    localStorage.setItem('vb_boards', JSON.stringify(vbBoards));
+    localStorage.setItem('vb_boards_at', String(at));
+  } catch(e) {}
+  saveVbToServer(at);
+}
+
+/* Push to data/vb_boards.json via the server (debounced) so the board syncs through git */
+let vbServerTimer = null;
+function saveVbToServer(at) {
+  clearTimeout(vbServerTimer);
+  vbServerTimer = setTimeout(() => {
+    fetch('/api/state', { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ key:'vb_boards', savedAt: at, value: vbBoards }) }).catch(()=>{});
+  }, 600);
+}
+
+/* On boot, pull the server copy. Newer-timestamp wins, so neither machine wipes the other. */
+async function syncVbFromServer() {
+  let remote = null;
+  try {
+    const r = await (await fetch('/api/state?key=vb_boards')).json();
+    remote = r && r.data ? r.data : null;
+  } catch(e) { return; }   // offline or old server — localStorage still works
+  const localAt = Number(localStorage.getItem('vb_boards_at') || 0);
+  if (remote && Array.isArray(remote.value) && remote.value.length && (remote.savedAt || 0) > localAt) {
+    vbBoards = remote.value;
+    try {
+      localStorage.setItem('vb_boards', JSON.stringify(vbBoards));
+      localStorage.setItem('vb_boards_at', String(remote.savedAt || Date.now()));
+    } catch(e) {}
+    if (!vbActiveId || !vbBoards.find(b=>b.id===vbActiveId)) vbActiveId = vbBoards[0]?.id || null;
+    renderVbSidebar();
+    renderVbCanvas();
+  } else if (!remote) {
+    // server has no file yet → push our current local copy up so git can track it
+    saveVb();
+  }
+}
 
 function vbGetActive() { return vbBoards.find(b=>b.id===vbActiveId); }
 
@@ -2622,6 +2667,7 @@ renderVbSidebar();
 renderVbCanvas();
 renderPodRoll();
 renderPomoFocusChip();
+syncVbFromServer();
 
 requestAnimationFrame(() => initVisualizer());
 window.addEventListener('load', () => setTimeout(initGoogleAuth, 500));

@@ -9,6 +9,7 @@ const { exec } = require('child_process');
 const PORT = 3131;
 const ROOT = __dirname;
 const PROJECTS_DIR = path.join(ROOT, 'projects');
+const DATA_DIR = path.join(ROOT, 'data');   // synced state (vision board, etc.) — tracked by git
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -40,7 +41,7 @@ function json(res, code, obj) {
 function readBody(req) {
   return new Promise((resolve, reject) => {
     let data = '';
-    req.on('data', c => { data += c; if (data.length > 1e6) { reject(new Error('too big')); req.destroy(); } });
+    req.on('data', c => { data += c; if (data.length > 12e6) { reject(new Error('too big')); req.destroy(); } });
     req.on('end', () => { try { resolve(JSON.parse(data || '{}')); } catch (e) { reject(e); } });
   });
 }
@@ -138,6 +139,29 @@ const server = http.createServer(async (req, res) => {
         })(data);
         return json(res, 200, { videos });
       } catch (e) { return json(res, 200, { videos: [], error: String(e.message || e) }); }
+    }
+
+    // GET /api/state?key=  — read a synced JSON blob from data/<key>.json
+    if (url.pathname === '/api/state' && req.method === 'GET') {
+      const key = safeSlug(url.searchParams.get('key'));
+      if (!key) return json(res, 400, { error: 'bad key' });
+      const f = path.join(DATA_DIR, key + '.json');
+      if (!fs.existsSync(f)) return json(res, 200, { exists: false, data: null });
+      try { return json(res, 200, { exists: true, data: JSON.parse(fs.readFileSync(f, 'utf8')) }); }
+      catch (e) { return json(res, 200, { exists: false, data: null }); }
+    }
+
+    // POST /api/state { key, savedAt, value } — write data/<key>.json (committed via git to sync machines)
+    if (url.pathname === '/api/state' && req.method === 'POST') {
+      try {
+        const b = await readBody(req);
+        const key = safeSlug(b.key);
+        if (!key) return json(res, 400, { error: 'bad key' });
+        fs.mkdirSync(DATA_DIR, { recursive: true });
+        const { key: _k, ...payload } = b;
+        fs.writeFileSync(path.join(DATA_DIR, key + '.json'), JSON.stringify(payload, null, 2));
+        return json(res, 200, { ok: true });
+      } catch (e) { return json(res, 500, { error: String(e.message || e) }); }
     }
 
     return json(res, 404, { error: 'unknown api' });
