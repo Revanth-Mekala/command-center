@@ -170,6 +170,14 @@
         </svg>
         <span>Journal</span>
       </li>
+      <li class="nav-tab" id="btnBriefing" title="Daily Briefing">
+        <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+          <circle cx="10" cy="10" r="2" fill="currentColor"/>
+          <path d="M6.5 13.5a5 5 0 0 1 0-7M13.5 6.5a5 5 0 0 1 0 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          <path d="M4 16a8.5 8.5 0 0 1 0-12M16 4a8.5 8.5 0 0 1 0 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        <span>Brief</span>
+      </li>
       <li class="nav-tab nav-tab-bottom" data-tab="settings" title="Settings">
         <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
           <circle cx="10" cy="10" r="2.5" stroke="currentColor" stroke-width="1.5"/>
@@ -776,6 +784,23 @@
   </div>
 
   <!-- ── MINESWEEPER BREAK GAME ─────────────────────────── -->
+  <!-- ── JARVIS DAILY BRIEFING ────────────────────────────── -->
+  <div class="jarvis-overlay" id="jarvisOverlay" style="display:none">
+    <div class="jarvis-card">
+      <div class="jarvis-core">
+        <div class="jarvis-rings"><span></span><span></span><span></span></div>
+        <div class="jarvis-dot"></div>
+      </div>
+      <div class="jarvis-title">DAILY BRIEFING</div>
+      <div class="jarvis-sub" id="jarvisDate"></div>
+      <div class="jarvis-lines" id="jarvisLines"></div>
+      <div class="jarvis-actions">
+        <button class="jarvis-btn" id="jarvisMute">Mute voice</button>
+        <button class="jarvis-btn jarvis-btn-primary" id="jarvisClose">Dismiss</button>
+      </div>
+    </div>
+  </div>
+
   <div id="minesweeperOverlay" class="ms-overlay" style="display:none">
     <div class="ms-modal" id="msModal">
       <div class="ms-header">

@@ -1291,7 +1291,7 @@ function initGoogleAuth() {
   if (!clientId || typeof google==='undefined') return;
   googleTokenClient = google.accounts.oauth2.initTokenClient({
     client_id: clientId,
-    scope: 'https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar.readonly',
+    scope: 'https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/gmail.readonly',
     callback: async resp => {
       if (resp.error) return;
       googleToken = resp.access_token;
@@ -2654,6 +2654,196 @@ function podOnPomoComplete() {
   if (el && podDetailId === pod.focusId) el.textContent = pod.projects[pod.focusId].pomos;
 }
 
+/* ─── JARVIS DAILY BRIEFING ──────────────────────────────── */
+
+let jarvisMuted = false;
+let jarvisAbort = false;
+
+/* Prefer a sophisticated British male voice; fall back gracefully */
+function jarvisVoice() {
+  const vs = speechSynthesis.getVoices();
+  return vs.find(v => /en-GB/i.test(v.lang) && /ryan|george|daniel|arthur|male/i.test(v.name))
+      || vs.find(v => /en-GB/i.test(v.lang))
+      || vs.find(v => /^en/i.test(v.lang))
+      || null;
+}
+if ('speechSynthesis' in window) { speechSynthesis.getVoices(); speechSynthesis.onvoiceschanged = () => {}; }
+
+function jarvisSpeak(text) {
+  return new Promise(resolve => {
+    if (jarvisMuted || jarvisAbort || !('speechSynthesis' in window)) return resolve();
+    const u = new SpeechSynthesisUtterance(text);
+    const v = jarvisVoice();
+    if (v) u.voice = v;
+    u.rate = 0.98; u.pitch = 0.92;
+    u.onend = resolve; u.onerror = resolve;
+    speechSynthesis.speak(u);
+  });
+}
+
+/* ── data gatherers (all free, all optional) ── */
+
+const WMO = { 0:'clear skies',1:'mostly clear',2:'partly cloudy',3:'overcast',45:'foggy',48:'freezing fog',
+  51:'light drizzle',53:'drizzle',55:'heavy drizzle',61:'light rain',63:'rain',65:'heavy rain',
+  66:'freezing rain',67:'freezing rain',71:'light snow',73:'snow',75:'heavy snow',77:'snow grains',
+  80:'passing showers',81:'showers',82:'heavy showers',85:'snow showers',86:'snow showers',
+  95:'a thunderstorm',96:'a thunderstorm with hail',99:'a severe thunderstorm' };
+
+function jarvisCoords() {
+  return new Promise(resolve => {
+    const cached = localStorage.getItem('jarvis_coords');
+    if (cached) { try { return resolve(JSON.parse(cached)); } catch(e) {} }
+    if (!navigator.geolocation) return resolve(null);
+    navigator.geolocation.getCurrentPosition(
+      p => { const c = { lat: p.coords.latitude, lon: p.coords.longitude };
+             localStorage.setItem('jarvis_coords', JSON.stringify(c)); resolve(c); },
+      () => resolve(null), { timeout: 8000 });
+  });
+}
+
+async function jarvisWeather() {
+  const c = await jarvisCoords();
+  if (!c) return 'I was unable to obtain your location for a weather report, sir.';
+  try {
+    const r = await (await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${c.lat}&longitude=${c.lon}` +
+      '&current=temperature_2m,apparent_temperature,weather_code' +
+      '&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max' +
+      '&timezone=auto&temperature_unit=fahrenheit')).json();
+    const cur = r.current, day = r.daily;
+    const desc = WMO[cur.weather_code] || 'indeterminate conditions';
+    let line = `It is currently ${Math.round(cur.temperature_2m)} degrees with ${desc}, feeling like ${Math.round(cur.apparent_temperature)}. ` +
+               `Expect a high of ${Math.round(day.temperature_2m_max[0])} and a low of ${Math.round(day.temperature_2m_min[0])}.`;
+    const rain = day.precipitation_probability_max[0];
+    if (rain >= 40) line += ` There is a ${rain} percent chance of precipitation — an umbrella would not go amiss.`;
+    return line;
+  } catch(e) { return 'The weather service appears to be offline at the moment.'; }
+}
+
+async function jarvisEmails() {
+  if (!googleToken) return 'I do not have clearance to your inbox. Connect Google in the Calendar tab — and do reconnect if you linked it before today, as mail access is newly requested.';
+  try {
+    const h = { 'Authorization': `Bearer ${googleToken}` };
+    const list = await (await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages?q=in:inbox newer_than:1d&maxResults=12', { headers: h })).json();
+    if (list.error) {
+      if (list.error.code === 403 || list.error.code === 401) return 'Your Google session predates mail clearance, sir. Kindly disconnect and reconnect in the Calendar tab.';
+      return 'The mail service returned an error.';
+    }
+    const msgs = list.messages || [];
+    if (!msgs.length) return 'Your inbox is remarkably quiet — no new messages in the last day.';
+    const details = await Promise.all(msgs.slice(0, 3).map(async m => {
+      const d = await (await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${m.id}?format=metadata&metadataHeaders=From&metadataHeaders=Subject`, { headers: h })).json();
+      const hd = Object.fromEntries((d.payload?.headers || []).map(x => [x.name, x.value]));
+      const from = (hd.From || 'someone').replace(/<.*>/, '').replace(/"/g, '').trim();
+      return { from, subject: hd.Subject || 'no subject' };
+    }));
+    const total = list.resultSizeEstimate || msgs.length;
+    let line = `You have ${total} message${total === 1 ? '' : 's'} from the last day.`;
+    if (details.length) line += ' Most recently: ' + details.map(d => `${d.from}, regarding “${d.subject}”`).join('; ') + '.';
+    return line;
+  } catch(e) { return 'I could not reach the mail service.'; }
+}
+
+async function jarvisCalendar() {
+  if (!googleToken) return 'Calendar access is not connected, so your schedule is a mystery to us both.';
+  try {
+    const start = new Date(); start.setHours(0,0,0,0);
+    const end = new Date();   end.setHours(23,59,59,999);
+    const r = await (await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events?' + new URLSearchParams({
+      timeMin: start.toISOString(), timeMax: end.toISOString(), singleEvents: 'true', orderBy: 'startTime', maxResults: '10'
+    }), { headers: { 'Authorization': `Bearer ${googleToken}` } })).json();
+    const evs = (r.items || []).filter(e => e.status !== 'cancelled');
+    if (!evs.length) return 'Your calendar is entirely clear today. How liberating.';
+    const fmt = e => {
+      const t = e.start?.dateTime ? new Date(e.start.dateTime).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : 'all day';
+      return `${e.summary || 'an untitled engagement'} at ${t}`;
+    };
+    let line = `You have ${evs.length} engagement${evs.length === 1 ? '' : 's'} today: ` + evs.slice(0, 4).map(fmt).join('; ');
+    if (evs.length > 4) line += `; and ${evs.length - 4} more`;
+    return line + '.';
+  } catch(e) { return 'The calendar service is not responding.'; }
+}
+
+const JARVIS_JOKES = [
+  'I would tell you a UDP joke, but you might not get it.',
+  'There are only two hard things in computer science: cache invalidation, naming things, and off-by-one errors.',
+  'I asked the server for a joke. It said: 404, humour not found.',
+  'Why do programmers prefer dark mode? Because light attracts bugs.',
+  'A SQL query walks into a bar, approaches two tables, and asks: may I join you?',
+  'I changed my password to “incorrect”, so whenever I forget it, the computer politely reminds me.',
+  'Why did the developer go broke? He used up all his cache.',
+];
+
+async function jarvisJoke() {
+  try {
+    const r = await (await fetch('https://icanhazdadjoke.com/', { headers: { 'Accept': 'application/json' } })).json();
+    if (r.joke) return r.joke;
+  } catch(e) {}
+  return JARVIS_JOKES[Math.floor(Math.random() * JARVIS_JOKES.length)];
+}
+
+/* ── the show ── */
+
+function jarvisLine(tag, text, speakNow) {
+  const wrap = document.getElementById('jarvisLines');
+  const div = document.createElement('div');
+  div.className = 'jarvis-line' + (speakNow ? ' speaking' : '');
+  div.innerHTML = `<span class="jl-tag">${esc(tag)}</span><span class="jl-text">${esc(text)}</span>`;
+  wrap.appendChild(div);
+  wrap.parentElement.scrollTop = wrap.parentElement.scrollHeight;
+  return div;
+}
+
+async function openBriefing() {
+  const overlay = document.getElementById('jarvisOverlay');
+  overlay.style.display = 'flex';
+  document.getElementById('jarvisLines').innerHTML = '';
+  jarvisAbort = false; jarvisMuted = false;
+  document.getElementById('jarvisMute').textContent = 'Mute voice';
+  const now = new Date();
+  document.getElementById('jarvisDate').textContent = now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' }).toUpperCase();
+  localStorage.setItem('jarvis_last', podToday());
+  document.getElementById('btnBriefing').classList.remove('pulse');
+
+  const hour = now.getHours();
+  const daypart = hour < 12 ? 'morning' : hour < 18 ? 'afternoon' : 'evening';
+  const greeting = `Good ${daypart}, sir. Systems are online. Here is your briefing.`;
+
+  // fetch everything in parallel while the greeting is being spoken
+  const dataP = Promise.all([jarvisEmails(), jarvisWeather(), jarvisCalendar(), jarvisJoke()]);
+
+  const g = jarvisLine('SYSTEM', greeting, true);
+  await jarvisSpeak(greeting);
+  g.classList.remove('speaking');
+  if (jarvisAbort) return;
+
+  const [emails, weather, calendar, joke] = await dataP;
+  const sections = [ ['INBOX', emails], ['WEATHER', weather], ['AGENDA', calendar], ['LEVITY', `And finally — ${joke}`] ];
+  for (const [tag, text] of sections) {
+    if (jarvisAbort) return;
+    const el = jarvisLine(tag, text, true);
+    await jarvisSpeak(text);
+    el.classList.remove('speaking');
+  }
+  if (!jarvisAbort) {
+    const bye = 'That concludes the briefing. Do try to have a productive day.';
+    const el = jarvisLine('SYSTEM', bye, true);
+    await jarvisSpeak(bye);
+    el.classList.remove('speaking');
+  }
+}
+
+document.getElementById('btnBriefing')?.addEventListener('click', openBriefing);
+document.getElementById('jarvisClose')?.addEventListener('click', () => {
+  jarvisAbort = true;
+  if ('speechSynthesis' in window) speechSynthesis.cancel();
+  document.getElementById('jarvisOverlay').style.display = 'none';
+});
+document.getElementById('jarvisMute')?.addEventListener('click', () => {
+  jarvisMuted = !jarvisMuted;
+  if (jarvisMuted && 'speechSynthesis' in window) speechSynthesis.cancel();
+  document.getElementById('jarvisMute').textContent = jarvisMuted ? 'Unmute voice' : 'Mute voice';
+});
+
 /* ─── BOOT ───────────────────────────────────────────────── */
 
 initGoogleSignIn();
@@ -2672,6 +2862,9 @@ renderVbCanvas();
 renderPodRoll();
 renderPomoFocusChip();
 syncVbFromServer();
+// Queue today's announcement: pulse the Brief button until it's played
+// (browsers require a click before speech is allowed, so it can't auto-play)
+if (localStorage.getItem('jarvis_last') !== podToday()) document.getElementById('btnBriefing')?.classList.add('pulse');
 
 requestAnimationFrame(() => initVisualizer());
 window.addEventListener('load', () => setTimeout(initGoogleAuth, 500));

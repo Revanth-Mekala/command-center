@@ -3772,6 +3772,153 @@ body::after {
 .hourglass-svg [fill="rgba(255,255,255,0.08)"] { fill: rgba(var(--accent-rgb), 0.22); }
 .hg-particle { fill: rgba(var(--accent-rgb), 0.9) !important; }
 
+/* ─── JARVIS DAILY BRIEFING ──────────────────────────────── */
+
+.jarvis-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(1, 5, 9, 0.82);
+  backdrop-filter: blur(6px);
+  animation: jarvis-fade 0.3s ease-out;
+}
+
+@keyframes jarvis-fade { from { opacity: 0; } to { opacity: 1; } }
+
+.jarvis-card {
+  position: relative;
+  width: min(620px, 92vw);
+  max-height: 84vh;
+  overflow-y: auto;
+  background: linear-gradient(170deg, rgba(var(--accent-rgb), 0.08), rgba(2, 10, 16, 0.92));
+  border: 1px solid rgba(var(--accent-rgb), 0.5);
+  border-radius: 16px;
+  padding: 28px 30px 22px;
+  box-shadow: 0 0 60px rgba(var(--accent-rgb), 0.25), inset 0 0 40px rgba(var(--accent-rgb), 0.05);
+  animation: jarvis-in 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+
+@keyframes jarvis-in {
+  from { transform: scale(0.85) translateY(24px); opacity: 0; }
+  to   { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+/* corner brackets */
+.jarvis-card::before, .jarvis-card::after {
+  content: '';
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--accent);
+  opacity: 0.8;
+}
+.jarvis-card::before { top: 8px; left: 8px; border-right: none; border-bottom: none; }
+.jarvis-card::after  { bottom: 8px; right: 8px; border-left: none; border-top: none; }
+
+/* pulsing core */
+.jarvis-core { position: relative; width: 74px; height: 74px; margin: 0 auto 14px; }
+.jarvis-dot {
+  position: absolute;
+  inset: 27px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 24px rgba(var(--accent-rgb), 0.9);
+  animation: jarvis-breathe 2s ease-in-out infinite;
+}
+.jarvis-rings span {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1.5px solid rgba(var(--accent-rgb), 0.6);
+  animation: jarvis-ring 2.4s ease-out infinite;
+}
+.jarvis-rings span:nth-child(2) { animation-delay: 0.8s; }
+.jarvis-rings span:nth-child(3) { animation-delay: 1.6s; }
+
+@keyframes jarvis-ring {
+  0%   { transform: scale(0.45); opacity: 0.9; }
+  100% { transform: scale(1.35); opacity: 0; }
+}
+@keyframes jarvis-breathe {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.18); }
+}
+
+.jarvis-title {
+  text-align: center;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.42em;
+  color: var(--accent);
+  text-shadow: 0 0 14px rgba(var(--accent-rgb), 0.7);
+}
+
+.jarvis-sub {
+  text-align: center;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text2);
+  margin: 6px 0 18px;
+  letter-spacing: 0.12em;
+}
+
+.jarvis-lines { display: flex; flex-direction: column; gap: 12px; min-height: 120px; }
+
+.jarvis-line {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  animation: jarvis-line-in 0.4s ease-out;
+}
+@keyframes jarvis-line-in {
+  from { opacity: 0; transform: translateX(-14px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+.jarvis-line .jl-tag {
+  flex-shrink: 0;
+  min-width: 78px;
+  text-align: center;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
+  color: var(--accent);
+  border: 1px solid rgba(var(--accent-rgb), 0.45);
+  border-radius: 4px;
+  padding: 3px 7px;
+  margin-top: 1px;
+  text-shadow: 0 0 6px rgba(var(--accent-rgb), 0.5);
+}
+.jarvis-line .jl-text { font-size: 13.5px; line-height: 1.6; color: var(--text); }
+.jarvis-line.speaking .jl-text { text-shadow: 0 0 10px rgba(var(--accent-rgb), 0.35); }
+
+.jarvis-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+
+.jarvis-btn {
+  background: transparent;
+  border: 1px solid rgba(var(--accent-rgb), 0.45);
+  border-radius: 8px;
+  color: var(--text2);
+  font-family: var(--font);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  padding: 7px 16px;
+  cursor: pointer;
+}
+.jarvis-btn:hover { color: var(--accent); border-color: var(--accent); }
+.jarvis-btn-primary { background: var(--accent); color: #021018; border-color: var(--accent); box-shadow: 0 0 14px rgba(var(--accent-rgb), 0.45); }
+
+/* pulsing sidebar button when today's briefing hasn't played */
+#btnBriefing.pulse svg { animation: jarvis-btn-pulse 1.6s ease-in-out infinite; }
+@keyframes jarvis-btn-pulse {
+  0%, 100% { filter: drop-shadow(0 0 2px rgba(var(--accent-rgb), 0.4)); opacity: 0.75; }
+  50%      { filter: drop-shadow(0 0 10px rgba(var(--accent-rgb), 1)); opacity: 1; }
+}
+
 /* ─── JOURNAL ────────────────────────────────────────────── */
 
 #tab-journal {
