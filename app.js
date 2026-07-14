@@ -2654,6 +2654,130 @@ function podOnPomoComplete() {
   if (el && podDetailId === pod.focusId) el.textContent = pod.projects[pod.focusId].pomos;
 }
 
+/* ─── DAILY PROTOCOL SCHEDULE ────────────────────────────── */
+
+const SCHED_LEARNING = { 1:'AP Calc', 2:'AP Physics', 3:'Java / AP CSA', 4:'AI / Machine Learning', 5:'Anything you want to learn' };
+
+const SCHED_WEEKDAY = [
+  { id:'wake',   name:'Wake Up',      start:510,  end:540,  items:['No phone for the first 30 minutes','Shower · brush teeth · skincare','Get dressed — even if staying home','Eat breakfast'],
+    goal:'Start the day feeling like you\'re going somewhere.' },
+  { id:'walk',   name:'Plan + Walk',  start:540,  end:570,  items:['15–20 minute walk outside','What\'s today\'s goal?','What do I want to finish before lunch?','No doomscrolling'] },
+  { id:'deep',   name:'Deep Work 1',  start:570,  end:690,  items:['Main project ONLY — FTC simulator · AI automation · Java project','No YouTube · No Discord · No Reddit','Phone stays across the room'],
+    goal:'By the end, answer: “What did I build today?”' },
+  { id:'guitar', name:'Guitar',       start:690,  end:720,  items:['One thing only: chords, barre chords, or one song','Consistency beats long sessions'] },
+  { id:'lunch',  name:'Lunch + Break',start:720,  end:780,  items:['Guilt-free free time','YouTube / scrolling allowed — first time today'] },
+  { id:'learn',  name:'Learning',     start:780,  end:840,  items:[] },   // items filled per weekday
+  { id:'move',   name:'Exercise',     start:840,  end:900,  items:['Pick one: gym · home workout · basketball · long walk · bike ride','Movement resets your focus'] },
+  { id:'create', name:'Creative Hour',start:900,  end:960,  items:['Tangible result: CAD · Blender · design · video editing · writing · robotics'] },
+  { id:'free',   name:'Free Time',    start:960,  end:1200, items:['Hang out · games · movies · friends · family','No guilt'] },
+];
+
+const SCHED_WEEKEND = {
+  6: { id:'sat', name:'Saturday', start:0, end:1440, items:['Sleep in a little','Go somewhere: mall · library · café · hike','Finish any unfinished work','Enjoy yourself'],
+       goal:'Recharge — you earned it.' },
+  0: { id:'sun', name:'Sunday — Planning Day', start:0, end:1440, items:['What did I finish? What am I proud of?','What am I doing next week?','Clean your room and reset','Set concrete weekly goals — outcomes, not “I\'ll code”'],
+       goal:'Progress is easier to see when it\'s tied to concrete outcomes.' },
+};
+
+let schedSelectedId = null;   // null = follow the clock
+
+function schedFmt(mins) {
+  const h24 = Math.floor(mins / 60), m = mins % 60;
+  const h = ((h24 + 11) % 12) + 1;
+  return `${h}:${String(m).padStart(2,'0')}`;
+}
+
+function schedBlocksToday() {
+  const dow = new Date().getDay();
+  if (SCHED_WEEKEND[dow]) return [SCHED_WEEKEND[dow]];
+  return SCHED_WEEKDAY.map(b => b.id !== 'learn' ? b : {
+    ...b, items: [`Today's rotation: ${SCHED_LEARNING[dow]}`, 'One focused hour — notes or practice problems'],
+  });
+}
+
+function renderSchedule() {
+  const strip = document.getElementById('schedStrip');
+  if (!strip) return;
+  const blocks = schedBlocksToday();
+  const now = new Date();
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+  const weekend = blocks.length === 1;
+  const active = blocks.find(b => nowMin >= b.start && nowMin < b.end) || null;
+  const shown = blocks.find(b => b.id === schedSelectedId) || active || (nowMin < blocks[0].start ? blocks[0] : blocks[blocks.length - 1]);
+
+  const dayName = now.toLocaleDateString([], { weekday: 'long' }).toUpperCase();
+  strip.innerHTML = `
+    <div class="sched-head">
+      <span class="sched-title">Daily Protocol — ${dayName}</span>
+      <div class="sched-rules">
+        <span class="sched-rule">R1 · no phone in work blocks</span>
+        <span class="sched-rule">R2 · no YouTube before lunch</span>
+        <span class="sched-rule">R3 · one major project</span>
+      </div>
+    </div>
+    <div class="sched-bars" id="schedBars"></div>
+    <div class="sched-detail" id="schedDetail"></div>`;
+
+  const bars = document.getElementById('schedBars');
+  const t0 = blocks[0].start, t1 = blocks[blocks.length - 1].end;
+
+  blocks.forEach(b => {
+    const el = document.createElement('div');
+    el.className = 'sched-block'
+      + (active && b.id === active.id ? ' active' : '')
+      + (b.id === shown.id ? ' selected' : '')
+      + (nowMin >= b.end && !weekend ? ' done' : '');
+    // width proportional to duration (free time weighted lighter so it doesn't dominate)
+    const mins = b.id === 'free' ? 90 : (b.end - b.start);
+    el.style.flexGrow = mins;
+    el.style.flexBasis = '0';
+    el.innerHTML = `<span class="sb-name">${esc(b.name)}</span>
+      <span class="sb-time">${weekend ? 'ALL DAY' : (schedFmt(b.start) + (b.id === 'free' ? '+' : '–' + schedFmt(b.end)))}</span>`;
+    el.addEventListener('click', () => {
+      schedSelectedId = (schedSelectedId === b.id) ? null : b.id;
+      renderSchedule();
+    });
+    bars.appendChild(el);
+  });
+
+  // live time marker
+  if (!weekend && nowMin >= t0 && nowMin <= t1) {
+    // account for the weighted free-time width
+    const weights = blocks.map(b => b.id === 'free' ? 90 : b.end - b.start);
+    const totalW = weights.reduce((a, x) => a + x, 0);
+    let acc = 0, pct = null;
+    for (let i = 0; i < blocks.length; i++) {
+      const b = blocks[i];
+      if (nowMin >= b.start && nowMin < b.end) {
+        pct = (acc + (nowMin - b.start) / (b.end - b.start) * weights[i]) / totalW * 100;
+        break;
+      }
+      acc += weights[i];
+    }
+    if (pct !== null) {
+      const mark = document.createElement('div');
+      mark.className = 'sched-now';
+      mark.style.left = pct + '%';
+      bars.appendChild(mark);
+    }
+  }
+
+  // detail panel
+  const status = weekend ? 'TODAY'
+    : (active && shown.id === active.id) ? 'NOW'
+    : nowMin < shown.start ? 'UP NEXT'
+    : nowMin >= shown.end ? 'DONE' : 'NOW';
+  document.getElementById('schedDetail').innerHTML = `
+    <span class="sd-status">${status}</span>
+    <div class="sd-body">
+      <div class="sd-title">${esc(shown.name)}${weekend ? '' : ` · ${schedFmt(shown.start)}${shown.id === 'free' ? ' onward' : '–' + schedFmt(shown.end)}`}</div>
+      <div class="sd-items">${shown.items.map(i => `<span class="sd-item">${esc(i)}</span>`).join('')}</div>
+      ${shown.goal ? `<div class="sd-goal">◆ ${esc(shown.goal)}</div>` : ''}
+    </div>`;
+}
+
+setInterval(renderSchedule, 60000);   // keep NOW marker and active block live
+
 /* ─── JARVIS DAILY BRIEFING ──────────────────────────────── */
 
 let jarvisMuted = false;
@@ -2763,6 +2887,39 @@ async function jarvisCalendar() {
   } catch(e) { return 'The calendar service is not responding.'; }
 }
 
+const JARVIS_TIPS = [
+  'Don\'t touch your phone for the first 30 minutes after waking up.',
+  'Get dressed every morning. If you stay in pajamas, your brain stays in rest mode.',
+  'Go outside before noon, even if it\'s just a 15 to 20 minute walk.',
+  'Have one clear goal for the day. If someone asked what you\'re building today, you should have an answer.',
+  'Finish one thing before starting another. Momentum comes from completion.',
+  'Protect your first two hours of work. That\'s when your brain is freshest.',
+  'Keep your phone across the room during work blocks. Make distractions inconvenient.',
+  'Don\'t open YouTube, Reddit, Instagram, TikTok, or Discord until after lunch.',
+  'Separate work and entertainment. Use a different browser profile for productive tasks.',
+  'When you feel stuck, make the next step smaller. Don\'t think “build the project” — think “write one function.”',
+  'Don\'t aim for a perfect day. Aim for one productive block at a time.',
+  'The next hour matters more than the last one. If you get distracted, restart immediately instead of waiting for tomorrow.',
+  'Move your body every day. Lift, run, walk, stretch — it all counts.',
+  'Practice guitar even if it\'s only 15 minutes. Consistency beats occasional marathon sessions.',
+  'Leave your desk after every deep work session. Your brain needs breaks to stay focused.',
+  'Measure progress by what you finished, not how busy you felt.',
+  'Only keep one major project at a time. Too many exciting ideas often mean none get finished.',
+  'Treat your desk like an office. When you sit there, you\'re there to work, not scroll.',
+  'Ask yourself every evening: what\'s one thing I accomplished today? Even a small win keeps momentum.',
+  'Remember why you\'re doing this. Every hour you invest now builds skills future you will be proud of.',
+  'Write tomorrow\'s first task down tonight. Starting is easier when the decision is already made.',
+  'Two minutes of tidying your desk buys an hour of cleaner thinking.',
+  'Boredom is fuel. Sit with it for five minutes before reaching for a screen.',
+  'Ship something small every single day — a commit, a riff, a sketch. Streaks build empires.',
+];
+
+function jarvisTip() {
+  const d = new Date();
+  const dayOfYear = Math.floor((d - new Date(d.getFullYear(), 0, 0)) / 86400000);
+  return JARVIS_TIPS[dayOfYear % JARVIS_TIPS.length];
+}
+
 const JARVIS_JOKES = [
   'I would tell you a UDP joke, but you might not get it.',
   'There are only two hard things in computer science: cache invalidation, naming things, and off-by-one errors.',
@@ -2817,7 +2974,13 @@ async function openBriefing() {
   if (jarvisAbort) return;
 
   const [emails, weather, calendar, joke] = await dataP;
-  const sections = [ ['INBOX', emails], ['WEATHER', weather], ['AGENDA', calendar], ['LEVITY', `And finally — ${joke}`] ];
+  const sections = [
+    ['INBOX', emails],
+    ['WEATHER', weather],
+    ['AGENDA', calendar],
+    ['PROTOCOL', `Today's directive: ${jarvisTip()}`],
+    ['LEVITY', `And finally — ${joke}`],
+  ];
   for (const [tag, text] of sections) {
     if (jarvisAbort) return;
     const el = jarvisLine(tag, text, true);
@@ -2862,6 +3025,7 @@ renderVbCanvas();
 renderPodRoll();
 renderPomoFocusChip();
 syncVbFromServer();
+renderSchedule();
 // Queue today's announcement: pulse the Brief button until it's played
 // (browsers require a click before speech is allowed, so it can't auto-play)
 if (localStorage.getItem('jarvis_last') !== podToday()) document.getElementById('btnBriefing')?.classList.add('pulse');

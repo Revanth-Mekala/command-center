@@ -3912,6 +3912,158 @@ body::after {
 .jarvis-btn:hover { color: var(--accent); border-color: var(--accent); }
 .jarvis-btn-primary { background: var(--accent); color: #021018; border-color: var(--accent); box-shadow: 0 0 14px rgba(var(--accent-rgb), 0.45); }
 
+/* ─── DAILY PROTOCOL SCHEDULE ────────────────────────────── */
+
+.sched-strip {
+  flex-shrink: 0;
+  padding: 12px 26px 10px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg2);
+}
+
+.sched-head {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.sched-title {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--accent);
+  text-shadow: 0 0 10px rgba(var(--accent-rgb), 0.5);
+}
+.sched-rules { display: flex; gap: 6px; margin-left: auto; }
+.sched-rule {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  color: var(--text2);
+  border: 1px solid var(--border2);
+  border-radius: 4px;
+  padding: 2px 7px;
+  white-space: nowrap;
+}
+
+.sched-bars {
+  position: relative;
+  display: flex;
+  gap: 3px;
+  height: 40px;
+}
+
+.sched-block {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  background: var(--surface);
+  cursor: pointer;
+  overflow: hidden;
+  min-width: 0;
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+}
+.sched-block:hover { border-color: rgba(var(--accent-rgb), 0.5); }
+
+.sched-block .sb-name {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  max-width: 96%;
+  text-overflow: ellipsis;
+}
+.sched-block .sb-time {
+  font-family: var(--mono);
+  font-size: 8.5px;
+  color: var(--text3);
+  white-space: nowrap;
+}
+
+.sched-block.done { opacity: 0.45; }
+
+.sched-block.active {
+  background: linear-gradient(170deg, rgba(var(--accent-rgb), 0.22), rgba(var(--accent-rgb), 0.07));
+  border-color: var(--accent);
+  box-shadow: 0 0 14px rgba(var(--accent-rgb), 0.35), inset 0 0 12px rgba(var(--accent-rgb), 0.1);
+}
+.sched-block.active .sb-name { color: var(--accent); text-shadow: 0 0 8px rgba(var(--accent-rgb), 0.6); }
+.sched-block.active .sb-time { color: var(--text2); }
+
+.sched-block.selected:not(.active) { border-color: rgba(var(--accent-rgb), 0.75); background: var(--surface2); }
+
+/* live time marker */
+.sched-now {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  width: 2px;
+  background: var(--accent);
+  box-shadow: 0 0 8px rgba(var(--accent-rgb), 0.9);
+  pointer-events: none;
+  z-index: 2;
+}
+.sched-now::before {
+  content: '';
+  position: absolute;
+  top: -3px;
+  left: -2.5px;
+  border: 3.5px solid transparent;
+  border-top-color: var(--accent);
+}
+
+/* detail row */
+.sched-detail {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 9px;
+  min-height: 30px;
+}
+.sched-detail .sd-status {
+  flex-shrink: 0;
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  color: var(--accent);
+  border: 1px solid rgba(var(--accent-rgb), 0.5);
+  border-radius: 4px;
+  padding: 3px 8px;
+  margin-top: 2px;
+  text-shadow: 0 0 6px rgba(var(--accent-rgb), 0.5);
+}
+.sched-detail .sd-body { flex: 1; min-width: 0; }
+.sched-detail .sd-title { font-size: 12.5px; font-weight: 700; color: var(--text); }
+.sched-detail .sd-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  margin-top: 4px;
+}
+.sched-detail .sd-item {
+  font-size: 10.5px;
+  color: var(--text2);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: 10px;
+  padding: 2px 9px;
+}
+.sched-detail .sd-goal {
+  margin-top: 5px;
+  font-size: 10.5px;
+  font-style: italic;
+  color: var(--accent);
+  opacity: 0.85;
+}
+
 /* pulsing sidebar button when today's briefing hasn't played */
 #btnBriefing.pulse svg { animation: jarvis-btn-pulse 1.6s ease-in-out infinite; }
 @keyframes jarvis-btn-pulse {
