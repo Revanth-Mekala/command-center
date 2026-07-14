@@ -1038,8 +1038,8 @@ document.querySelectorAll('.ms-diff-btn').forEach(btn => btn.addEventListener('c
 /* ─── POMODORO ───────────────────────────────────────────── */
 
 function sandColor(p) {
-  if (p > 0.50) return '#f0f0f0';
-  if (p > 0.25) return '#ffcc44';
+  if (p > 0.50) return `rgb(${accentRGB})`;   // holographic sand in the theme's light color
+  if (p > 0.25) return '#ffd54f';
   if (p > 0.10) return '#ff8833';
   return '#ff4422';
 }
@@ -1521,17 +1521,21 @@ document.getElementById('spProgressTrack').addEventListener('click', async e => 
 
 /* ─── THEMES ─────────────────────────────────────────────── */
 
+/* Holographic HUD palettes — every theme is a hologram, only the light color changes */
 const THEMES = {
-  dark:     { '--bg':'#0d0d0d','--bg2':'#111111','--surface':'#161616','--surface2':'#1c1c1c','--card':'#1e1e1e','--card-hi':'#252525','--border':'#262626','--border2':'#333333','--text':'#f0f0f0','--text2':'#888888','--text3':'#444444' },
-  midnight: { '--bg':'#000000','--bg2':'#080808','--surface':'#0d0d0d','--surface2':'#111111','--card':'#141414','--card-hi':'#1a1a1a','--border':'#1a1a1a','--border2':'#252525','--text':'#e8e8e8','--text2':'#777777','--text3':'#363636' },
-  ember:    { '--bg':'#0c0906','--bg2':'#110d09','--surface':'#170f0b','--surface2':'#1e140e','--card':'#231810','--card-hi':'#2a1d14','--border':'#2a1d14','--border2':'#3d2b1e','--text':'#f0e8e0','--text2':'#9e7c6a','--text3':'#5c4030' },
-  forest:   { '--bg':'#080c08','--bg2':'#0c110c','--surface':'#101610','--surface2':'#151c15','--card':'#182018','--card-hi':'#1e281e','--border':'#1e281e','--border2':'#2d3d2d','--text':'#e8f0e8','--text2':'#7a9e7a','--text3':'#3d5c3d' },
-  ocean:    { '--bg':'#07090d','--bg2':'#0b0e12','--surface':'#0f1318','--surface2':'#141920','--card':'#181f28','--card-hi':'#1e2730','--border':'#1e2730','--border2':'#2d3d50','--text':'#e0eaf5','--text2':'#6a8fae','--text3':'#3d5570' },
+  dark:     { '--bg':'#020609','--bg2':'#031017','--surface':'#04141e','--surface2':'#051d2b','--card':'#041926','--card-hi':'#072b3d','--border':'#0b394d','--border2':'#125570','--text':'#d8f6ff','--text2':'#5fa8bf','--text3':'#25566b','--accent':'#35e0ff','--accent-rgb':'53,224,255','--white':'#35e0ff' },
+  midnight: { '--bg':'#050309','--bg2':'#080512','--surface':'#0c081a','--surface2':'#120c26','--card':'#100a22','--card-hi':'#1b1238','--border':'#241847','--border2':'#392564','--text':'#ecdfff','--text2':'#9d7fc7','--text3':'#4c3a6b','--accent':'#b16cff','--accent-rgb':'177,108,255','--white':'#b16cff' },
+  ember:    { '--bg':'#090501','--bg2':'#110a03','--surface':'#170e04','--surface2':'#211405','--card':'#1c1105','--card-hi':'#301f09','--border':'#42280a','--border2':'#5e3a10','--text':'#fff0da','--text2':'#c49b64','--text3':'#6b4e26','--accent':'#ffb340','--accent-rgb':'255,179,64','--white':'#ffb340' },
+  forest:   { '--bg':'#010805','--bg2':'#02110a','--surface':'#03170e','--surface2':'#042113','--card':'#031c10','--card-hi':'#06301d','--border':'#0a4226','--border2':'#0f5e36','--text':'#dcffe9','--text2':'#6fbf8f','--text3':'#2c6b46','--accent':'#4dff88','--accent-rgb':'77,255,136','--white':'#4dff88' },
+  ocean:    { '--bg':'#020409','--bg2':'#040814','--surface':'#050c1e','--surface2':'#071129','--card':'#060e23','--card-hi':'#0b1a3d','--border':'#10254d','--border2':'#1a3870','--text':'#dfeaff','--text2':'#7f9dc7','--text3':'#3a4f6b','--accent':'#4d8dff','--accent-rgb':'77,141,255','--white':'#4d8dff' },
 };
+
+let accentRGB = '53,224,255';   // cached for canvas drawing (visualizer)
 
 function applyTheme(key) {
   const t = THEMES[key]; if (!t) return;
   Object.entries(t).forEach(([k,v]) => document.documentElement.style.setProperty(k,v));
+  accentRGB = t['--accent-rgb'] || '53,224,255';
   localStorage.setItem('cc_theme', key);
   document.querySelectorAll('.theme-swatch').forEach(s => s.classList.toggle('active', s.dataset.theme===key));
 }
@@ -1791,7 +1795,7 @@ function vbDrawLine(svg, bubble) {
   line.setAttribute('x1', 0); line.setAttribute('y1', 0);
   line.setAttribute('x2', bubble.x + Math.floor((bubble.w||180)/2));
   line.setAttribute('y2', bubble.y + Math.floor((bubble.h||100)/2));
-  line.setAttribute('stroke', 'rgba(255,255,255,0.13)');
+  line.setAttribute('stroke', `rgba(${accentRGB},0.4)`);
   line.setAttribute('stroke-width', '1.5');
   line.setAttribute('stroke-dasharray', '5,4');
   line.setAttribute('stroke-linecap', 'round');
@@ -1999,7 +2003,7 @@ function vizLoop() {
     const x = i * (barW + gap);
     const y = (H - h) / 2;
     const alpha = spIsPlaying ? 0.35 + beatPulse * 0.5 + vizEnergy * 0.15 : 0.18;
-    vizCtx.fillStyle = `rgba(255,255,255,${alpha.toFixed(2)})`;
+    vizCtx.fillStyle = `rgba(${accentRGB},${alpha.toFixed(2)})`;
     vizCtx.beginPath();
     vizCtx.rect(x, y, Math.max(1, barW), h);
     vizCtx.fill();

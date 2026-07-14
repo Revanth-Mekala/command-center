@@ -3594,6 +3594,184 @@ body {
 
 .pod-yt-pill.active { color: #fff; border-color: rgba(255,255,255,0.45); background: var(--card-hi); }
 
+/* ═══════════════════════════════════════════════════════════
+   STARK HUD OVERRIDE LAYER — holographic workshop interface
+   Later in the file ⇒ wins the cascade. Colors ride on
+   --accent / --accent-rgb / --white set per-theme in app.js.
+   ═══════════════════════════════════════════════════════════ */
+
+:root {
+  --font: 'Rajdhani', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --mono: 'Share Tech Mono', 'SF Mono', 'Consolas', monospace;
+  --accent: #35e0ff;
+  --accent-rgb: 53,224,255;
+  --white: #35e0ff;
+  --bg:#020609; --bg2:#031017; --surface:#04141e; --surface2:#051d2b;
+  --card:#041926; --card-hi:#072b3d; --border:#0b394d; --border2:#125570;
+  --text:#d8f6ff; --text2:#5fa8bf; --text3:#25566b;
+}
+
+body { font-family: var(--font); }
+
+/* Holographic screen texture: faint blueprint grid + scanlines over everything */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9998;
+  background-image:
+    linear-gradient(rgba(var(--accent-rgb), 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(var(--accent-rgb), 0.025) 1px, transparent 1px);
+  background-size: 44px 44px;
+}
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  background: repeating-linear-gradient(0deg, rgba(0,0,0,0.10) 0 1px, transparent 1px 3px);
+}
+
+/* Ambient accent glow bleeding from the top of each panel */
+.main {
+  background: radial-gradient(ellipse 90% 45% at 50% -8%, rgba(var(--accent-rgb), 0.07), transparent 60%), var(--bg);
+}
+
+::selection { background: rgba(var(--accent-rgb), 0.35); }
+
+::-webkit-scrollbar-thumb { background: rgba(var(--accent-rgb), 0.3); }
+::-webkit-scrollbar-thumb:hover { background: rgba(var(--accent-rgb), 0.5); }
+
+/* HUD labels — glowing, spaced, uppercase */
+.section-label, .panel-title, .pod-panel-title, .settings-group-title,
+.vb-sidebar-header, .pod-day-label {
+  color: var(--accent);
+  text-shadow: 0 0 10px rgba(var(--accent-rgb), 0.5);
+  letter-spacing: 0.26em;
+}
+
+.sidebar-brand {
+  color: var(--accent);
+  text-shadow: 0 0 16px rgba(var(--accent-rgb), 0.9);
+}
+
+.nav-tab.active svg { filter: drop-shadow(0 0 6px rgba(var(--accent-rgb), 0.8)); }
+.nav-tab.active { color: var(--accent); }
+
+/* Timer readout */
+.hourglass-time {
+  color: var(--accent);
+  font-family: var(--mono);
+  text-shadow: 0 0 20px rgba(var(--accent-rgb), 0.6);
+}
+
+/* Panels & cards get the faint internal hologram glow */
+.pod-panel, .pod-option-card, .pod-active-banner, .pomo-focus-chip,
+.cal-create-card, .pod-dice, .settings-group, .ms-card {
+  box-shadow: inset 0 0 24px rgba(var(--accent-rgb), 0.045), 0 0 12px rgba(var(--accent-rgb), 0.06);
+}
+
+.pod-option-card:hover, .pod-tree-node:hover, .pod-active-banner:hover {
+  border-color: rgba(var(--accent-rgb), 0.65);
+  box-shadow: inset 0 0 24px rgba(var(--accent-rgb), 0.07), 0 0 18px rgba(var(--accent-rgb), 0.22);
+}
+
+/* Buttons & interactive accents */
+.pod-focus-btn {
+  background: var(--accent);
+  color: #021018;
+  box-shadow: 0 0 16px rgba(var(--accent-rgb), 0.45);
+}
+.pod-btn-sm:hover, .pod-back-btn:hover { color: var(--accent); border-color: rgba(var(--accent-rgb), 0.6); }
+.pod-yt-pill.active { color: var(--accent); border-color: rgba(var(--accent-rgb), 0.55); }
+.pod-yt-pill:hover { color: var(--accent); border-color: rgba(var(--accent-rgb), 0.45); }
+.pod-resource:hover { border-color: rgba(var(--accent-rgb), 0.5); }
+.pod-milestone input { accent-color: var(--accent); }
+.pod-progress-fill, .rocket-progress-fill { background: var(--accent); box-shadow: 0 0 8px rgba(var(--accent-rgb), 0.7); }
+
+.pod-dice { border-color: rgba(var(--accent-rgb), 0.35); }
+.pod-dice:hover { border-color: rgba(var(--accent-rgb), 0.7); }
+.pod-dice-cube { color: var(--accent); text-shadow: 0 0 14px rgba(var(--accent-rgb), 0.7); }
+
+/* Skill tree */
+.pod-tree-tier::before { background: rgba(var(--accent-rgb), 0.3); }
+.pod-tree-tier.unlocked::after { background: var(--accent); border-color: var(--accent); box-shadow: 0 0 8px rgba(var(--accent-rgb), 0.8); }
+.pod-tree-tier.current::after { box-shadow: 0 0 0 4px rgba(var(--accent-rgb), 0.2), 0 0 12px rgba(var(--accent-rgb), 0.9); }
+.pod-tree-node.active { border-color: var(--accent); box-shadow: 0 0 14px rgba(var(--accent-rgb), 0.3); }
+.pod-tree-node.done { border-color: rgba(var(--accent-rgb), 0.55); background: linear-gradient(160deg, rgba(var(--accent-rgb), 0.14), var(--card)); }
+
+/* Terminal — proper console glow */
+.pod-term-out {
+  background: rgba(1, 10, 16, 0.9);
+  border-color: rgba(var(--accent-rgb), 0.3);
+  color: var(--text);
+  box-shadow: inset 0 0 28px rgba(var(--accent-rgb), 0.05);
+}
+.pod-term-out .t-cmd, .pod-term-prompt { color: var(--accent); text-shadow: 0 0 6px rgba(var(--accent-rgb), 0.5); }
+.pod-term-input { background: rgba(1, 10, 16, 0.9); border-color: rgba(var(--accent-rgb), 0.3); color: var(--text); }
+.pod-term-input:focus { border-color: rgba(var(--accent-rgb), 0.7); box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.2); }
+
+/* Vision board — holographic nodes and threads */
+.vb-vision-node {
+  background: linear-gradient(160deg, rgba(var(--accent-rgb), 0.14), rgba(var(--accent-rgb), 0.04));
+  border-color: rgba(var(--accent-rgb), 0.55);
+  box-shadow: 0 0 28px rgba(var(--accent-rgb), 0.2);
+}
+.vb-bubble {
+  background: linear-gradient(165deg, rgba(var(--accent-rgb), 0.10), rgba(2, 14, 22, 0.72));
+  border-color: rgba(var(--accent-rgb), 0.4);
+  box-shadow: 0 0 16px rgba(var(--accent-rgb), 0.12);
+}
+.vb-canvas-area svg line { stroke: rgba(var(--accent-rgb), 0.4) !important; }
+
+/* Inputs */
+.pod-yt-input:focus, .pod-gh-input:focus, .settings-input:focus,
+.cal-create-input:focus, .cal-create-textarea:focus {
+  border-color: rgba(var(--accent-rgb), 0.7);
+  box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.18);
+}
+
+/* Theme swatch active ring */
+.theme-swatch.active .theme-preview { box-shadow: 0 0 12px rgba(var(--accent-rgb), 0.7); }
+
+/* ── ROCKET → holographic blueprint wireframe ─────────────── */
+.rocket-svg { filter: drop-shadow(0 0 10px rgba(var(--accent-rgb), 0.3)); }
+.rocket-svg [fill="#181818"],
+.rocket-svg [fill="#1c1c1c"],
+.rocket-svg [fill="#1e1e1e"] { fill: rgba(var(--accent-rgb), 0.07); }
+.rocket-svg [fill="#141414"],
+.rocket-svg [fill="#111"],
+.rocket-svg [fill="#0d0d0d"] { fill: rgba(2, 12, 20, 0.72); }
+.rocket-svg [fill="#222"] { fill: rgba(var(--accent-rgb), 0.2); }
+.rocket-svg [stroke="#2e2e2e"],
+.rocket-svg [stroke="#2c2c2c"] { stroke: rgba(var(--accent-rgb), 0.85); }
+.rocket-svg [stroke="#282828"],
+.rocket-svg [stroke="#363636"],
+.rocket-svg [stroke="#232323"] { stroke: rgba(var(--accent-rgb), 0.55); }
+.rocket-svg line[stroke="#1e1e1e"] { stroke: rgba(var(--accent-rgb), 0.4); }
+.rocket-svg [fill="rgba(255,255,255,0.02)"] { fill: rgba(var(--accent-rgb), 0.14); }
+.rocket-svg [stroke="rgba(255,255,255,0.04)"] { stroke: rgba(var(--accent-rgb), 0.18); }
+.rocket-svg [stroke="rgba(255,255,255,0.08)"] { stroke: rgba(var(--accent-rgb), 0.45); }
+#portholeTitle, #portholeTimerEl {
+  color: var(--accent) !important;
+  text-shadow: 0 0 6px rgba(var(--accent-rgb), 0.8);
+}
+
+/* ── HOURGLASS → holographic frame ────────────────────────── */
+.hourglass-svg { filter: drop-shadow(0 0 12px rgba(var(--accent-rgb), 0.28)); }
+.hourglass-svg [fill="#10141a"] { fill: rgba(2, 14, 22, 0.55); }
+.hourglass-svg [stroke="#262626"] { stroke: rgba(var(--accent-rgb), 0.7); }
+.hourglass-svg [fill="#272727"] { fill: rgba(var(--accent-rgb), 0.16); }
+.hourglass-svg [stroke="#3c3c3c"],
+.hourglass-svg [stroke="#3a3a3a"] { stroke: rgba(var(--accent-rgb), 0.6); }
+.hourglass-svg [fill="#1a1a1a"] { fill: rgba(2, 14, 22, 0.9); }
+.hourglass-svg [stroke="#2e2e2e"] { stroke: rgba(var(--accent-rgb), 0.5); }
+.hourglass-svg [fill="rgba(255,255,255,0.05)"],
+.hourglass-svg [fill="rgba(255,255,255,0.08)"] { fill: rgba(var(--accent-rgb), 0.22); }
+.hg-particle { fill: rgba(var(--accent-rgb), 0.9) !important; }
+
 /* ─── JOURNAL ────────────────────────────────────────────── */
 
 #tab-journal {

@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Command Center</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
@@ -207,19 +210,19 @@
                   <svg class="rocket-svg" viewBox="0 0 500 160" xmlns="http://www.w3.org/2000/svg">
                     <defs>
                       <radialGradient id="fgOuter" cx="15%" cy="50%" r="85%">
-                        <stop offset="0%" stop-color="#ff5500" stop-opacity="0.85"/>
-                        <stop offset="100%" stop-color="#ff0000" stop-opacity="0"/>
+                        <stop offset="0%" stop-color="#00a2ff" stop-opacity="0.85"/>
+                        <stop offset="100%" stop-color="#0044ff" stop-opacity="0"/>
                       </radialGradient>
                       <radialGradient id="fgMid" cx="15%" cy="50%" r="85%">
-                        <stop offset="0%" stop-color="#ffcc00" stop-opacity="0.9"/>
-                        <stop offset="55%" stop-color="#ff6600" stop-opacity="0.65"/>
-                        <stop offset="100%" stop-color="#ff2200" stop-opacity="0"/>
+                        <stop offset="0%" stop-color="#6ef0ff" stop-opacity="0.9"/>
+                        <stop offset="55%" stop-color="#2bb8ff" stop-opacity="0.65"/>
+                        <stop offset="100%" stop-color="#0066ff" stop-opacity="0"/>
                       </radialGradient>
                       <radialGradient id="fgCore" cx="15%" cy="50%" r="85%">
                         <stop offset="0%" stop-color="#ffffff" stop-opacity="0.95"/>
-                        <stop offset="25%" stop-color="#fffaaa" stop-opacity="0.9"/>
-                        <stop offset="60%" stop-color="#ffaa00" stop-opacity="0.7"/>
-                        <stop offset="100%" stop-color="#ff4400" stop-opacity="0"/>
+                        <stop offset="25%" stop-color="#ccfaff" stop-opacity="0.9"/>
+                        <stop offset="60%" stop-color="#4fd8ff" stop-opacity="0.7"/>
+                        <stop offset="100%" stop-color="#0080ff" stop-opacity="0"/>
                       </radialGradient>
                       <filter id="fBlur" x="-60%" y="-60%" width="220%" height="220%">
                         <feGaussianBlur stdDeviation="3"/>
@@ -249,7 +252,7 @@
                     </g>
 
                     <!-- NOZZLE GLOW (level 1+) -->
-                    <ellipse class="nozzle-glow" cx="42" cy="80" rx="10" ry="18" fill="#ff5500" opacity="0"/>
+                    <ellipse class="nozzle-glow" cx="42" cy="80" rx="10" ry="18" fill="#2bb8ff" opacity="0"/>
 
                     <!-- TOP FIN -->
                     <path d="M 82,52 L 54,16 L 112,52" fill="#181818" stroke="#2e2e2e" stroke-width="1.5" stroke-linejoin="round"/>
@@ -367,15 +370,15 @@
                   <polygon points="45,92 55,92 90,162 10,162"/>
                 </clipPath>
                 <linearGradient id="hgShine" x1="0" y1="0" x2="1" y2="0">
-                  <stop offset="0%"   stop-color="rgba(255,255,255,0)"/>
-                  <stop offset="35%"  stop-color="rgba(255,255,255,0.07)"/>
-                  <stop offset="55%"  stop-color="rgba(255,255,255,0.12)"/>
-                  <stop offset="100%" stop-color="rgba(255,255,255,0)"/>
+                  <stop offset="0%"   stop-color="rgba(120,240,255,0)"/>
+                  <stop offset="35%"  stop-color="rgba(120,240,255,0.08)"/>
+                  <stop offset="55%"  stop-color="rgba(120,240,255,0.14)"/>
+                  <stop offset="100%" stop-color="rgba(120,240,255,0)"/>
                 </linearGradient>
                 <linearGradient id="hgPillar" x1="0" y1="0" x2="1" y2="0">
-                  <stop offset="0%"   stop-color="#262626"/>
-                  <stop offset="40%"  stop-color="#1e1e1e"/>
-                  <stop offset="100%" stop-color="#161616"/>
+                  <stop offset="0%"   stop-color="#0d3a4d"/>
+                  <stop offset="40%"  stop-color="#0a2a3a"/>
+                  <stop offset="100%" stop-color="#071e2b"/>
                 </linearGradient>
               </defs>
 
@@ -675,24 +678,24 @@
           <div class="settings-group-title">Themes</div>
           <div class="theme-swatches" id="themeSwatches">
             <button class="theme-swatch" data-theme="dark">
-              <span class="theme-preview" style="background:#0d0d0d;border-color:#333"></span>
-              <span class="theme-label">Dark</span>
+              <span class="theme-preview" style="background:#031019;border-color:#35e0ff"></span>
+              <span class="theme-label">Jarvis</span>
             </button>
             <button class="theme-swatch" data-theme="midnight">
-              <span class="theme-preview" style="background:#000000;border-color:#1a1a1a"></span>
-              <span class="theme-label">Midnight</span>
+              <span class="theme-preview" style="background:#0a0514;border-color:#b16cff"></span>
+              <span class="theme-label">Nebula</span>
             </button>
             <button class="theme-swatch" data-theme="ember">
-              <span class="theme-preview" style="background:#0c0906;border-color:#3d2b1e"></span>
-              <span class="theme-label">Ember</span>
+              <span class="theme-preview" style="background:#140b02;border-color:#ffb340"></span>
+              <span class="theme-label">Mark II</span>
             </button>
             <button class="theme-swatch" data-theme="forest">
-              <span class="theme-preview" style="background:#080c08;border-color:#2d3d2d"></span>
-              <span class="theme-label">Forest</span>
+              <span class="theme-preview" style="background:#02140a;border-color:#4dff88"></span>
+              <span class="theme-label">Matrix</span>
             </button>
             <button class="theme-swatch" data-theme="ocean">
-              <span class="theme-preview" style="background:#07090d;border-color:#2d3d50"></span>
-              <span class="theme-label">Ocean</span>
+              <span class="theme-preview" style="background:#020a1c;border-color:#4d8dff"></span>
+              <span class="theme-label">Deep Blue</span>
             </button>
           </div>
         </div>
