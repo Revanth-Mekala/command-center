@@ -1284,19 +1284,41 @@ document.getElementById('btnSaveSettings').addEventListener('click',()=>{
 
 let googleToken = null;
 let googleTokenClient = null;
+let googleMailClient = null;
+let googleHasMail = false;
 let calendarEvents = [];
+
+const G_CAL_SCOPES  = 'https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar.readonly';
+const G_MAIL_SCOPE  = 'https://www.googleapis.com/auth/gmail.readonly';
+
+function gAuthCallback(resp) {
+  const hint = document.getElementById('calConfigHint');
+  if (resp.error) {
+    if (hint) hint.textContent = `Google sign-in failed: ${resp.error}${resp.error_description ? ' — ' + resp.error_description : ''}`;
+    return;
+  }
+  googleToken = resp.access_token;
+  googleHasMail = (resp.scope || '').includes('gmail.readonly');
+  if (hint) hint.textContent = '';
+  loadCalendarEvents();
+}
 
 function initGoogleAuth() {
   const clientId=localStorage.getItem('googleClientId');
   if (!clientId || typeof google==='undefined') return;
+  // Calendar-only connect: gmail.readonly is a restricted scope, so bundling it
+  // into the main flow can get the whole consent rejected. Mail is opt-in below.
   googleTokenClient = google.accounts.oauth2.initTokenClient({
     client_id: clientId,
-    scope: 'https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/gmail.readonly',
-    callback: async resp => {
-      if (resp.error) return;
-      googleToken = resp.access_token;
-      await loadCalendarEvents();
-    },
+    scope: G_CAL_SCOPES,
+    callback: gAuthCallback,
+    error_callback: e => { const h=document.getElementById('calConfigHint'); if (h) h.textContent = `Google popup error: ${e.type || e.message || 'unknown'}`; },
+  });
+  googleMailClient = google.accounts.oauth2.initTokenClient({
+    client_id: clientId,
+    scope: G_CAL_SCOPES + ' ' + G_MAIL_SCOPE,
+    callback: gAuthCallback,
+    error_callback: e => { const h=document.getElementById('calConfigHint'); if (h) h.textContent = `Google popup error: ${e.type || e.message || 'unknown'}`; },
   });
 }
 
@@ -1308,8 +1330,14 @@ document.getElementById('btnCalConnect').addEventListener('click',()=>{
   googleTokenClient.requestAccessToken({prompt:'consent'});
 });
 
+document.getElementById('btnCalMail')?.addEventListener('click',()=>{
+  if (!googleMailClient) initGoogleAuth();
+  if (!googleMailClient) return;
+  googleMailClient.requestAccessToken({prompt:'consent'});
+});
+
 document.getElementById('btnCalDisconnect').addEventListener('click',()=>{
-  googleToken=null; calendarEvents=[];
+  googleToken=null; calendarEvents=[]; googleHasMail=false;
   document.getElementById('calEventsState').style.display='none';
   document.getElementById('calConnectState').style.display='flex';
 });
@@ -2844,13 +2872,16 @@ async function jarvisWeather() {
 }
 
 async function jarvisEmails() {
-  if (!googleToken) return 'I do not have clearance to your inbox. Connect Google in the Calendar tab — and do reconnect if you linked it before today, as mail access is newly requested.';
+  if (!googleToken) return 'I do not have clearance to your inbox. Connect Google in the Calendar tab first.';
+  if (!googleHasMail) return 'Mail clearance has not been granted. Press “Enable inbox briefing” in the Calendar tab and I shall report on your correspondence.';
   try {
     const h = { 'Authorization': `Bearer ${googleToken}` };
     const list = await (await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages?q=in:inbox newer_than:1d&maxResults=12', { headers: h })).json();
     if (list.error) {
-      if (list.error.code === 403 || list.error.code === 401) return 'Your Google session predates mail clearance, sir. Kindly disconnect and reconnect in the Calendar tab.';
-      return 'The mail service returned an error.';
+      const reason = list.error.errors?.[0]?.reason || list.error.status || '';
+      if (/accessNotConfigured|SERVICE_DISABLED/i.test(JSON.stringify(list.error))) return 'The Gmail A P I is not enabled in your Google Cloud project, sir. Enable it in the console and try again.';
+      if (list.error.code === 403 || list.error.code === 401) return 'Mail clearance was refused. Press “Enable inbox briefing” in the Calendar tab.';
+      return 'The mail service returned an error: ' + reason;
     }
     const msgs = list.messages || [];
     if (!msgs.length) return 'Your inbox is remarkably quiet — no new messages in the last day.';
